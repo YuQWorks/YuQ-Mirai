@@ -11,6 +11,10 @@ import java.lang.Exception
 
 class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
 
+    var at: Boolean = false
+    var reply: Boolean = false
+    var nextContext: String? = null
+
     override fun invoke(path: String, context: ActionContext): Boolean {
         if (context !is BotActionContext) return false
 //        if (super.invoke(path, context)) return true
@@ -20,7 +24,9 @@ class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
                 val o = before.invoke(context)
                 if (o != null) context[toLowerCaseFirstOne(o::class.java.simpleName)] = o
             }
-            reMessage = context.buildResult(invoker.invoke(context) ?: return true)
+            val re = invoker.invoke(context)
+            if (nextContext != null && context.nextContext == null) context.nextContext = nextContext
+            reMessage = context.buildResult(re ?: return true)
         } catch (e: DoNone) {
         } catch (e: Result) {
             reMessage = context.buildResult(e)
@@ -35,6 +41,8 @@ class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
                 reMessage.group = message.group
             }
         context.result = reMessage
+
+        if (reply) reMessage?.reply = context.message?.source
         return true
     }
 

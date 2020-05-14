@@ -2,8 +2,11 @@ package com.icecreamqaq.yuq.mirai.message
 
 import com.icecreamqaq.yuq.annotation.PathVar
 import com.icecreamqaq.yuq.message.*
+import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
+import net.mamoe.mirai.message.data.OfflineFriendImage
+import net.mamoe.mirai.message.data.OnlineFriendImage
 import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.utils.toExternalImage
 import java.io.File
@@ -20,7 +23,8 @@ class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 
     override fun toLocal(source: Any, message: Message) = PlainText(text)
     override fun toPath() = text
-    override fun convertByPathVar(type: PathVar.Type) = when (type) {
+    override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
+        PathVar.Type.Source -> this
         PathVar.Type.String -> text
         PathVar.Type.Switch -> {
             val textLow = text.toLowerCase()
@@ -39,7 +43,7 @@ class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
 
     override fun toLocal(source: Any, message: Message) =
             if (source !is Bot) throw RuntimeException("Not Allow Invoke")
-            else net.mamoe.mirai.message.data.At(source.groups[message.group!!][message.qq!!])
+            else net.mamoe.mirai.message.data.At(source.groups[message.group!!][user])
 
     override fun toPath() = "At_$user"
     override fun convertByPathVar(type: PathVar.Type) = when (type) {
@@ -68,6 +72,7 @@ class FaceImpl(override val faceId: Int) : MiraiMessageItemBase(), Face {
 class ImageSend : MiraiMessageItemBase(), Image {
 
     override lateinit var id: String
+    override lateinit var url: String
     lateinit var imageFile: File
 
     override fun toLocal(source: Any, message: Message): Any {
@@ -81,6 +86,23 @@ class ImageSend : MiraiMessageItemBase(), Image {
 
     override fun toPath() = "图片"
     override fun convertByPathVar(type: PathVar.Type) = null
+
+}
+
+class ImageReceive(override val id: String, override val url: String) : MiraiMessageItemBase(), Image {
+
+    override fun toLocal(source: Any, message: Message) = net.mamoe.mirai.message.data.Image(id)
+
+    override fun toPath(): String {
+        return "img_$id"
+    }
+
+    override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
+        PathVar.Type.String -> "图片"
+        PathVar.Type.Source -> this
+        else -> null
+    }
+
 
 }
 

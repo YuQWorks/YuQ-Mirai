@@ -2,11 +2,26 @@ package com.icecreamqaq.yuq.message
 
 import com.IceCreamQAQ.Yu.entity.Result
 
+interface MessagePlus {
+    operator fun plus(item: MessageItem): Message
+    operator fun plus(item: String): Message
+    operator fun plus(item: Message): Message
+}
+
+interface MessageSource {
+    val id: Int
+}
+
 abstract class Message : Result(), MessagePlus {
+
+    var temp: Boolean = false
 
     var id: Int? = null
     var qq: Long? = null
     var group: Long? = null
+
+    lateinit var source:MessageSource
+    var reply: MessageSource? = null
 
     lateinit var sourceMessage: String
     var body = ArrayList<MessageItem>()

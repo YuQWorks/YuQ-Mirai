@@ -11,12 +11,6 @@ interface MessageItem : MessagePlus {
     fun toMessage(): Message
 }
 
-interface MessagePlus {
-    operator fun plus(item: MessageItem): Message
-    operator fun plus(item: String): Message
-    operator fun plus(item: Message): Message
-}
-
 interface Text : MessageItem {
     val text: String
 }
@@ -31,6 +25,7 @@ interface Face : MessageItem {
 
 interface Image : MessageItem {
     val id: String
+    val url: String
 }
 
 interface NoImplItem : MessageItem {

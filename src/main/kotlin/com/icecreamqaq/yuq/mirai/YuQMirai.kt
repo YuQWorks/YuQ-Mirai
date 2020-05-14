@@ -1,6 +1,7 @@
 package com.icecreamqaq.yuq.mirai
 
 import com.IceCreamQAQ.Yu.DefaultApp
+import com.IceCreamQAQ.Yu.annotation.NotSearch
 import com.IceCreamQAQ.Yu.di.ConfigManager
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
@@ -18,6 +19,7 @@ import net.mamoe.mirai.event.subscribeMessages
 import net.mamoe.mirai.join
 import javax.inject.Inject
 
+@NotSearch
 class YuQMirai {
 
 //    @Inject

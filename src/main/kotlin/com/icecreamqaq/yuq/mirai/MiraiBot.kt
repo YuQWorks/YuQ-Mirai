@@ -1,32 +1,35 @@
 package com.icecreamqaq.yuq.mirai
 
 import com.IceCreamQAQ.Yu.AppLogger
+import com.IceCreamQAQ.Yu.`as`.ApplicationService
 import com.IceCreamQAQ.Yu.annotation.Config
+import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.RouterPlus
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.icecreamqaq.yuq.YuQ
+import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.event.GroupInviteEvent
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.event.GroupMessageEvent
 import com.icecreamqaq.yuq.event.PrivateMessageEvent
+import com.icecreamqaq.yuq.message.MessageSource
 import com.icecreamqaq.yuq.mirai.controller.MiraiBotActionContext
 import com.icecreamqaq.yuq.mirai.message.*
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
-import net.mamoe.mirai.event.events.BotInvitedJoinGroupRequestEvent
 import net.mamoe.mirai.event.events.MemberJoinRequestEvent
 import net.mamoe.mirai.event.events.NewFriendRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeMessages
+import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 import net.mamoe.mirai.message.data.*
-import net.mamoe.mirai.message.sourceId
 
 import javax.inject.Inject
 import javax.inject.Named
 
-class MiraiBot : YuQ {
+class MiraiBot : YuQ, ApplicationService {
 
     @Config("YuQ.Mirai.user.qq")
     private lateinit var qq: String
@@ -46,6 +49,10 @@ class MiraiBot : YuQ {
     private lateinit var priv: RouterPlus
 
     @Inject
+    @field:Named("context")
+    private lateinit var contextRouter: RouterPlus
+
+    @Inject
     private lateinit var logger: AppLogger
 
     @Inject
@@ -57,15 +64,28 @@ class MiraiBot : YuQ {
     @Inject
     override lateinit var messageItemFactory: MiraiMessageItemFactory
 
+    lateinit var sessionCache: EhcacheHelp<ContextSession>
 
     @Inject
     private lateinit var context: YuContext
 
     private lateinit var bot: Bot
 
-    fun init() {
+    override fun init() {
         bot = Bot(qq.toLong(), pwd)
         context.putBean(Bot::class.java, "", bot)
+    }
+
+    override fun start() {
+        context.injectBean(this)
+        sessionCache = context.getBean(EhcacheHelp::class.java,"ContextSession") as EhcacheHelp<ContextSession>
+        runBlocking {
+            startBot()
+        }
+    }
+
+    override fun stop() {
+
     }
 
     suspend fun startBot() {
@@ -77,7 +97,7 @@ class MiraiBot : YuQ {
         bot.subscribeMessages {
             always {
 
-                val privateMessage = this.sender == this.subject
+                val temp = this.sender == this.subject
                 val messageSource = this.message.toString()
 
                 logger.logDebug(
@@ -87,9 +107,13 @@ class MiraiBot : YuQ {
 
                 val message = MiraiMessage()
 
-                message.id = this.message[MessageSource].id
+                val miraiSource = this.message[MiraiSource] ?: return@always
+                val source = MiraiMessageSource(miraiSource)
+                message.source = source
+
+                message.id = miraiSource.id
                 message.qq = this.sender.id
-                if (!privateMessage) message.group = this.subject.id
+                if (!temp) message.group = this.subject.id
 
                 message.sourceMessage = messageSource
 
@@ -98,9 +122,10 @@ class MiraiBot : YuQ {
                 var itemNum = 0
                 loop@ for (m in this.message) {
                     when (m) {
-                        is MessageSource -> continue@loop
+                        is MiraiSource -> continue@loop
+                        is QuoteReply -> message.reply = MiraiMessageSource(m.source)
                         is PlainText -> {
-                            val sm = m.stringValue.trim()
+                            val sm = m.content.trim()
                             if (sm.isEmpty()) continue@loop
                             val sms = sm.split(" ")
                             var loopStart = 0
@@ -115,6 +140,10 @@ class MiraiBot : YuQ {
                             messageBody.add(AtImpl(m.target))
                             itemNum++
                         }
+                        is OnlineImage -> {
+                            messageBody.add(ImageReceive(m.imageId, m.originUrl))
+                            itemNum++
+                        }
                         else -> {
                             messageBody.add(NoImplItemImpl(m.toString()))
                             itemNum++
@@ -123,19 +152,31 @@ class MiraiBot : YuQ {
                 }
 
                 if (
-                        if (privateMessage) eventBus.post(PrivateMessageEvent(message))
+                        if (temp) eventBus.post(PrivateMessageEvent(message))
                         else eventBus.post(GroupMessageEvent(message))
                 ) return@always
 
                 val actionContext = MiraiBotActionContext()
+                val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
 
+                val session = sessionCache[sessionId] ?:{
+                    val session = ContextSession(sessionId)
+                    sessionCache[sessionId] = session
+                    session
+                }()
+
+                actionContext.session = session
                 actionContext.message = message
 
-                if (privateMessage) priv.invoke(actionContext.path[0], actionContext)
-                else group.invoke(actionContext.path[0], actionContext)
+                when {
+                    session.context != null -> contextRouter.invoke(session.context!!,actionContext)
+                    temp -> priv.invoke(actionContext.path[0], actionContext)
+                    else -> group.invoke(actionContext.path[0], actionContext)
+                }
+
+                session.context = actionContext.nextContext
 
                 sendMessage((actionContext.result ?: return@always) as Message)
-
             }
         }
 
@@ -144,7 +185,7 @@ class MiraiBot : YuQ {
             val e = com.icecreamqaq.yuq.event.NewFriendRequestEvent()
             if (eventBus.post(e) && e.accept) it.accept()
         }
-        bot.subscribeAlways<BotInvitedJoinGroupRequestEvent> {
+        bot.subscribeAlways<MemberJoinRequestEvent> {
             val e = GroupInviteEvent()
             if (eventBus.post(e) && e.accept) it.accept()
         }
@@ -154,8 +195,10 @@ class MiraiBot : YuQ {
 //        }
     }
 
-    override fun sendMessage(message: Message): Int {
+    override fun sendMessage(message: Message): MessageSource {
         var mm: MessageChain = buildMessageChain {}
+
+        if (message.reply != null) mm += QuoteReply((message.reply as MiraiMessageSource).source)
 
         for (messageItem in message.body) {
             mm += messageItem.toLocal(bot, message) as net.mamoe.mirai.message.data.Message
@@ -166,7 +209,7 @@ class MiraiBot : YuQ {
             else bot.friends[message.qq!!].sendMessage(mm)
         }
 
-        return re.sourceId
+        return MiraiMessageSource(re.source)
     }
 
 
