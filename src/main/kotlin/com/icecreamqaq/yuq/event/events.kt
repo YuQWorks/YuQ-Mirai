@@ -9,8 +9,11 @@ open class MessageEvent(val message: Message) : Event(), CancelEvent {
 }
 
 open class GroupMessageEvent(message: Message) : MessageEvent(message)
-
 open class PrivateMessageEvent(message: Message) : MessageEvent(message)
+
+open class MessageRecallEvent(val sender:Long,val operator:Long,val messageId:Int) : Event()
+open class PrivateRecallEvent(sender: Long,operator: Long,messageId: Int) : MessageRecallEvent(sender, operator, messageId)
+open class GroupRecallEvent(val group:Long,sender: Long,operator: Long,messageId: Int) : MessageRecallEvent(sender, operator, messageId)
 
 open class FriendListEvent : Event()
 open class NewRequestEvent : FriendListEvent(), CancelEvent {

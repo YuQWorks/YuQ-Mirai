@@ -10,6 +10,8 @@ interface MessagePlus {
 
 interface MessageSource {
     val id: Int
+
+    fun recall():Int
 }
 
 abstract class Message : Result(), MessagePlus {
@@ -42,5 +44,9 @@ abstract class Message : Result(), MessagePlus {
     override fun plus(item: Message): Message {
         body.addAll(item.body)
         return this
+    }
+
+    fun recall():Int {
+        return source.recall()
     }
 }

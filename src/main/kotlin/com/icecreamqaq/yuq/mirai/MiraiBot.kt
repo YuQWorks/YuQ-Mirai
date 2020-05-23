@@ -17,7 +17,8 @@ import com.icecreamqaq.yuq.mirai.message.*
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
-import net.mamoe.mirai.event.events.MemberJoinRequestEvent
+import net.mamoe.mirai.event.events.*
+import net.mamoe.mirai.event.events.MessageRecallEvent
 import net.mamoe.mirai.event.events.NewFriendRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeMessages
@@ -206,6 +207,10 @@ class MiraiBot : YuQ, ApplicationService {
         }
 
         return MiraiMessageSource(re.source)
+    }
+
+    override fun recallMessage(messageSource: MessageSource): Int {
+        return messageSource.recall()
     }
 
 

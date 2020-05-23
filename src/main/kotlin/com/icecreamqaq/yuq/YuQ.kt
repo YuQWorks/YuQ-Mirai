@@ -14,4 +14,6 @@ interface YuQ {
 
     fun sendMessage(message: Message): MessageSource
 
+    fun recallMessage(messageSource: MessageSource):Int
+
 }
