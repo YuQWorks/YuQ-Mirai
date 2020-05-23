@@ -22,7 +22,11 @@ open class BotControllerLoader : DefaultControllerLoaderImpl() {
 
     override fun createActionInvoker_(level: Int, method: Method): DefaultActionInvoker {
         val ai = BotActionInvoker(level)
-        ai.nextContext = method.getAnnotation(NextContext::class.java)?.value
+        ai.nextContext = {
+            val nc = method.getAnnotation(NextContext::class.java)
+            if (nc == null) null
+            else NextActionContext(nc.value, nc.status)
+        }()
         val qq = method.getAnnotation(QMsg::class.java) ?: return ai
         ai.reply = qq.reply
         ai.at = qq.at

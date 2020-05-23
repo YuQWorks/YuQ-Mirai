@@ -10,7 +10,7 @@ abstract class BotActionContext : ActionContext {
     override var result: Result? = null
 
     lateinit var session: ContextSession
-    var nextContext: String? = null
+    var nextContext: NextActionContext? = null
 
     private val saved = HashMap<String, Any?>()
 

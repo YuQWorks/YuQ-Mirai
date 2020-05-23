@@ -11,6 +11,14 @@ class MiraiMessage : Message() {
         body.add(TextImpl(text))
         return this
     }
+
+    override fun newMessage(): Message {
+        val message = MiraiMessage()
+        message.temp = this.temp
+        message.qq = this.qq
+        message.group = this.group
+        return message
+    }
 }
 
 class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource) : MessageSource {

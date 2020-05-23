@@ -8,11 +8,11 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import javax.inject.Named
 
-class BotReflectMethodInvoker(val method: Method, val instance: Any) : MethodInvoker {
+class BotReflectMethodInvoker(private val method: Method, private val instance: Any) : MethodInvoker {
 
-    var returnFlag: Boolean = false
-    var mps: Array<MethodPara?>? = null
-    lateinit var saves: Array<Saves>
+    private var returnFlag: Boolean = false
+    private var mps: Array<MethodPara?>? = null
+    private val saves: Array<Saves>
 
     init {
         returnFlag = (method.returnType?.name ?: "void") != "void"

@@ -9,11 +9,11 @@ import com.IceCreamQAQ.Yu.entity.Result
 import com.icecreamqaq.yuq.message.Message
 import java.lang.Exception
 
-class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
+open class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
 
     var at: Boolean = false
     var reply: Boolean = false
-    var nextContext: String? = null
+    var nextContext: NextActionContext? = null
 
     override fun invoke(path: String, context: ActionContext): Boolean {
         if (context !is BotActionContext) return false
@@ -30,6 +30,8 @@ class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
         } catch (e: DoNone) {
         } catch (e: Result) {
             reMessage = context.buildResult(e)
+        } catch (e: NextActionContext) {
+            context.nextContext = e
         } catch (e: Exception) {
             e.printStackTrace()
         }

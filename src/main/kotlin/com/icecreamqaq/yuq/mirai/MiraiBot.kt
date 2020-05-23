@@ -9,6 +9,7 @@ import com.IceCreamQAQ.Yu.di.BeanFactory
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.icecreamqaq.yuq.YuQ
+import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.entity.Friend
 import com.icecreamqaq.yuq.entity.Group
@@ -55,8 +56,7 @@ class MiraiBot : YuQ, ApplicationService {
     private lateinit var priv: RouterPlus
 
     @Inject
-    @field:Named("context")
-    private lateinit var contextRouter: RouterPlus
+    private lateinit var contextRouter: ContextRouter
 
     @Inject
     private lateinit var logger: AppLogger
@@ -211,8 +211,13 @@ class MiraiBot : YuQ, ApplicationService {
                     else -> group.invoke(actionContext.path[0], actionContext)
                 }
 
-                session.context = actionContext.nextContext
+                session.context = actionContext.nextContext?.router
 
+                if (session.context != null) {
+                    val msg = contextRouter.routers[session.context!!]?.tips?.get(actionContext.nextContext?.status)
+                    if (msg != null)
+                        sendMessage(actionContext.message!!.newMessage().plus(msg))
+                }
                 sendMessage((actionContext.result ?: return@always) as Message)
             }
         }

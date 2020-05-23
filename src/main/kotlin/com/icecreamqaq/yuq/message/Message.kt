@@ -46,6 +46,8 @@ abstract class Message : Result(), MessagePlus {
         return this
     }
 
+    abstract fun newMessage():Message
+
     fun recall():Int {
         return source.recall()
     }
