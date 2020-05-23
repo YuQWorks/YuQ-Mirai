@@ -2,10 +2,11 @@ package com.icecreamqaq.yuq.annotation
 
 import com.IceCreamQAQ.Yu.annotation.EnchantBy
 import com.IceCreamQAQ.Yu.annotation.LoadBy_
-import com.IceCreamQAQ.Yu.controller.DefaultControllerLoaderImpl
 import com.IceCreamQAQ.Yu.loader.enchant.MethodParaNamedEnchanter
 import com.icecreamqaq.yuq.controller.BotContextControllerLoader
 import com.icecreamqaq.yuq.controller.BotControllerLoader
+
+import java.lang.annotation.Repeatable
 import javax.inject.Named
 
 
@@ -22,9 +23,13 @@ annotation class PrivateController
 @LoadBy_(BotContextControllerLoader::class)
 @EnchantBy(MethodParaNamedEnchanter::class)
 annotation class ContextController
-annotation class ContextAction(val value:String)
+annotation class ContextAction(val value: String)
+annotation class ContextTips(val value: Array<ContextTip>)
+
+@Repeatable(ContextTip::class)
+annotation class ContextTip(val value: String, val status: Int = 0)
 annotation class NextContext(val value: String)
-annotation class Save(val value:String = "")
+annotation class Save(val value: String = "")
 
 annotation class QMsg(val at: Boolean = false, val reply: Boolean = false)
 
@@ -33,3 +38,6 @@ annotation class PathVar(val value: Int, val type: Type = Type.String) {
         Source, String, Integer, Switch, Long, Double
     }
 }
+
+annotation class Select(val value: String)
+annotation class Execute(val value: String)
