@@ -11,8 +11,6 @@ import com.icecreamqaq.yuq.YuQ
 import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.event.GroupInviteEvent
 import com.icecreamqaq.yuq.message.Message
-import com.icecreamqaq.yuq.event.GroupMessageEvent
-import com.icecreamqaq.yuq.event.PrivateMessageEvent
 import com.icecreamqaq.yuq.message.MessageSource
 import com.icecreamqaq.yuq.mirai.controller.MiraiBotActionContext
 import com.icecreamqaq.yuq.mirai.message.*
@@ -64,6 +62,8 @@ class MiraiBot : YuQ, ApplicationService {
     @Inject
     override lateinit var messageItemFactory: MiraiMessageItemFactory
 
+    @Inject
+    @field:Named("ContextSession")
     lateinit var sessionCache: EhcacheHelp<ContextSession>
 
     @Inject
@@ -73,25 +73,25 @@ class MiraiBot : YuQ, ApplicationService {
 
     override fun init() {
         bot = Bot(qq.toLong(), pwd)
+        runBlocking {
+            bot.alsoLogin()
+        }
         context.putBean(Bot::class.java, "", bot)
     }
 
     override fun start() {
-        context.injectBean(this)
-        sessionCache = context.getBean(EhcacheHelp::class.java,"ContextSession") as EhcacheHelp<ContextSession>
-        runBlocking {
-            startBot()
-        }
+//        context.injectBean(this)
+        startBot()
     }
 
     override fun stop() {
 
     }
 
-    suspend fun startBot() {
+    fun startBot() {
 
         val qqLong = qq.toLong()
-        bot.alsoLogin()
+
 
 
         bot.subscribeMessages {
@@ -159,7 +159,7 @@ class MiraiBot : YuQ, ApplicationService {
                 val actionContext = MiraiBotActionContext()
                 val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
 
-                val session = sessionCache[sessionId] ?:{
+                val session = sessionCache[sessionId] ?: {
                     val session = ContextSession(sessionId)
                     sessionCache[sessionId] = session
                     session
@@ -169,7 +169,7 @@ class MiraiBot : YuQ, ApplicationService {
                 actionContext.message = message
 
                 when {
-                    session.context != null -> contextRouter.invoke(session.context!!,actionContext)
+                    session.context != null -> contextRouter.invoke(session.context!!, actionContext)
                     temp -> priv.invoke(actionContext.path[0], actionContext)
                     else -> group.invoke(actionContext.path[0], actionContext)
                 }
@@ -189,10 +189,6 @@ class MiraiBot : YuQ, ApplicationService {
             val e = GroupInviteEvent()
             if (eventBus.post(e) && e.accept) it.accept()
         }
-
-//        bot.subscribeAlways<> {
-//            it.accept()
-//        }
     }
 
     override fun sendMessage(message: Message): MessageSource {
