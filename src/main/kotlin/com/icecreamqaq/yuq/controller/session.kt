@@ -3,13 +3,13 @@ package com.icecreamqaq.yuq.controller
 import com.IceCreamQAQ.Yu.annotation.Action
 import com.IceCreamQAQ.Yu.annotation.Before
 import com.IceCreamQAQ.Yu.controller.ActionContext
-import com.IceCreamQAQ.Yu.controller.router.DefaultRouter
 import com.IceCreamQAQ.Yu.controller.router.MethodInvoker
 import com.IceCreamQAQ.Yu.controller.router.RouterPlus
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.loader.LoadItem_
+import com.icecreamqaq.yuq.annotation.ContextTip
 import com.icecreamqaq.yuq.annotation.ContextTips
-import java.lang.Exception
+import java.lang.RuntimeException
 import java.util.ArrayList
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -61,15 +61,16 @@ class BotContextControllerLoader : BotControllerLoader() {
                 actionInvoker.invoker = methodInvoker
                 actionInvoker.befores = before
 
-                val tips = HashMap<Int, String>()
-                val tipsA = method.getAnnotation(ContextTips::class.java)
-                if (tipsA != null) {
-                    for (contextTip in tipsA.value) {
-                        tips[contextTip.status] = contextTip.value
+                val tip = HashMap<Int, String>()
+                val tips = method.getAnnotationsByType(ContextTip::class.java)
+                        ?: method.getAnnotation(ContextTips::class.java)?.value
+                if (tips != null) {
+                    for (contextTip in tips) {
+                        tip[contextTip.status] = contextTip.value
                     }
                 }
 
-                rootRouter.routers[path] = ContextAction(actionInvoker, tips)
+                rootRouter.routers[path] = ContextAction(actionInvoker, tip)
             }
         }
     }
@@ -87,4 +88,4 @@ data class ContextSession(val id: String, private val saves: MutableMap<String, 
 
 }
 
-data class NextActionContext(val router: String, val status: Int = 0) : Exception()
+data class NextActionContext(val router: String, val status: Int = 0) : RuntimeException()

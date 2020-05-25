@@ -26,7 +26,7 @@ annotation class ContextController
 annotation class ContextAction(val value: String)
 
 annotation class ContextTips(val value: Array<ContextTip>)
-@Repeatable(ContextTip::class)
+@Repeatable(ContextTips::class)
 annotation class ContextTip(val value: String, val status: Int = 0)
 annotation class NextContext(val value: String,val status: Int = 0)
 annotation class Save(val value: String = "")
