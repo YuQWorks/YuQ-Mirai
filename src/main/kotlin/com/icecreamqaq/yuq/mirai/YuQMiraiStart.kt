@@ -1,5 +1,6 @@
 package com.icecreamqaq.yuq.mirai
 
+import com.IceCreamQAQ.Yu.DefaultStarter
 import com.IceCreamQAQ.Yu.loader.AppClassloader
 import java.lang.reflect.Method
 
@@ -20,6 +21,12 @@ class YuQMiraiStart {
 
             val yu = yuClass.newInstance()
             start!!.invoke(yu)
+        }
+
+        @JvmStatic
+        fun start(args:Array<String>){
+            DefaultStarter.init(args)
+            start()
         }
 
     }
