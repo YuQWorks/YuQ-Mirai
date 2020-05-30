@@ -19,4 +19,12 @@ class MiraiMessageFactory : MessageFactory {
         message.qq = qq
         return message
     }
+
+    override fun newTemp(qq: Long, group: Long): Message {
+        val message = MiraiMessage()
+        message.temp = true
+        message.qq = qq
+        message.group = group
+        return message
+    }
 }

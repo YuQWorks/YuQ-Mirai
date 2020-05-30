@@ -13,9 +13,9 @@ import java.io.File
 import java.lang.RuntimeException
 
 abstract class MiraiMessageItemBase : MessageItem {
-    override operator fun plus(item: MessageItem): Message = MiraiMessage() + item
-    override operator fun plus(item: String): Message = MiraiMessage() + item
-    override operator fun plus(item: Message): Message = MiraiMessage() + item
+    override operator fun plus(item: MessageItem): Message = toMessage() + item
+    override operator fun plus(item: String): Message = toMessage() + item
+    override operator fun plus(item: Message): Message = toMessage() + item
     override fun toMessage(): Message = MiraiMessage() + this
 }
 

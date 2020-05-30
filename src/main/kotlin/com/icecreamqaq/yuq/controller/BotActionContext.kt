@@ -3,8 +3,11 @@ package com.icecreamqaq.yuq.controller
 import com.IceCreamQAQ.Yu.controller.ActionContext
 import com.IceCreamQAQ.Yu.entity.Result
 import com.icecreamqaq.yuq.message.Message
+import com.icecreamqaq.yuq.message.MessageItem
+import com.icecreamqaq.yuq.mirai.message.MiraiMessage
+import com.icecreamqaq.yuq.mirai.message.TextImpl
 
-abstract class BotActionContext : ActionContext {
+open class BotActionContext : ActionContext {
 
     override lateinit var path: Array<String>
     override var result: Result? = null
@@ -43,6 +46,23 @@ abstract class BotActionContext : ActionContext {
         saved[name] = obj
     }
 
-    abstract override fun buildResult(obj: Any): Message?
+    override fun buildResult(obj: Any): Message?{
+        return when (obj) {
+            is String -> {
+                val message = this.message!!.newMessage()
+                val mb = message.body
+                mb.add(TextImpl(obj))
+                message
+            }
+            is MessageItem -> {
+                val message = this.message!!.newMessage()
+                val mb = message.body
+                mb.add(obj)
+                message
+            }
+            is Message -> obj
+            else -> buildResult(obj.toString())
+        }
+    }
 
 }

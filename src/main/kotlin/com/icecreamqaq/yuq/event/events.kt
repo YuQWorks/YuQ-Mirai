@@ -16,11 +16,11 @@ open class PrivateRecallEvent(sender: Long,operator: Long,messageId: Int) : Mess
 open class GroupRecallEvent(val group:Long,sender: Long,operator: Long,messageId: Int) : MessageRecallEvent(sender, operator, messageId)
 
 open class FriendListEvent : Event()
-open class NewRequestEvent : FriendListEvent(), CancelEvent {
+open class NewRequestEvent(val message:String) : FriendListEvent(), CancelEvent {
     override fun cancelAble() = true
     var accept = false
 }
 
-open class NewFriendRequestEvent : NewRequestEvent()
-open class GroupInviteEvent : NewRequestEvent()
+open class NewFriendRequestEvent(val qq:Long,message:String) : NewRequestEvent(message)
+open class GroupInviteEvent(val group: Long,val qq:Long,message:String) : NewRequestEvent(message)
 

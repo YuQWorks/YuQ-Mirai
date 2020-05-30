@@ -9,6 +9,7 @@ import com.IceCreamQAQ.Yu.di.BeanFactory
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.icecreamqaq.yuq.YuQ
+import com.icecreamqaq.yuq.controller.BotActionContext
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.entity.Friend
@@ -27,9 +28,11 @@ import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.event.events.MessageRecallEvent
-import net.mamoe.mirai.event.events.NewFriendRequestEvent
+import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeMessages
+import net.mamoe.mirai.message.FriendMessageEvent
+import net.mamoe.mirai.message.TempMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 import net.mamoe.mirai.message.data.*
 
@@ -127,12 +130,11 @@ class MiraiBot : YuQ, ApplicationService {
 
         val qqLong = qq.toLong()
 
-
-
         bot.subscribeMessages {
             always {
 
-                val temp = this.sender == this.subject
+                val temp = this is TempMessageEvent
+
                 val messageSource = this.message.toString()
 
                 logger.logDebug(
@@ -145,10 +147,15 @@ class MiraiBot : YuQ, ApplicationService {
                 val miraiSource = this.message[MiraiSource] ?: return@always
                 val source = MiraiMessageSource(miraiSource)
                 message.source = source
+                message.temp = temp
 
                 message.id = miraiSource.id
                 message.qq = this.sender.id
-                if (!temp) message.group = this.subject.id
+                message.group = when (this) {
+                    is TempMessageEvent -> this.sender.group.id
+                    is GroupMessageEvent -> this.subject.id
+                    else -> null
+                }
 
                 message.sourceMessage = messageSource
 
@@ -193,7 +200,7 @@ class MiraiBot : YuQ, ApplicationService {
                         else eventBus.post(GroupMessageEvent(message))
                 ) return@always
 
-                val actionContext = MiraiBotActionContext()
+                val actionContext = BotActionContext()
                 val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
 
                 val session = sessionCache[sessionId] ?: {
@@ -223,12 +230,16 @@ class MiraiBot : YuQ, ApplicationService {
         }
 
 
-        bot.subscribeAlways<NewFriendRequestEvent> {
-            val e = com.icecreamqaq.yuq.event.NewFriendRequestEvent()
+        bot.subscribeAlways<MiraiNewFriendRequestEvent> {
+            val e = NewFriendRequestEvent(this.fromId, this.message)
+            if (eventBus.post(e) && e.accept) it.accept()
+        }
+        bot.subscribeAlways<BotInvitedJoinGroupRequestEvent> {
+            val e = GroupInviteEvent(this.groupId, this.invitorId, "")
             if (eventBus.post(e) && e.accept) it.accept()
         }
         bot.subscribeAlways<MemberJoinRequestEvent> {
-            val e = GroupInviteEvent()
+            val e = GroupInviteEvent(this.groupId, 0, "")
             if (eventBus.post(e) && e.accept) it.accept()
         }
 
@@ -285,14 +296,18 @@ class MiraiBot : YuQ, ApplicationService {
         var mm: MessageChain = buildMessageChain {}
 
         if (message.reply != null) mm += QuoteReply((message.reply as MiraiMessageSource).source)
+        if (message.at) mm += AtImpl(message.qq!!).toLocal(bot, message)
 
         for (messageItem in message.body) {
             mm += messageItem.toLocal(bot, message) as net.mamoe.mirai.message.data.Message
         }
 
         val re = runBlocking {
-            if (message.group != null) bot.groups[message.group!!].sendMessage(mm)
-            else bot.friends[message.qq!!].sendMessage(mm)
+            when {
+                message.temp -> bot.groups[message.group!!][message.qq!!].sendMessage(mm)
+                message.group != null -> bot.groups[message.group!!].sendMessage(mm)
+                else -> bot.friends[message.qq!!].sendMessage(mm)
+            }
         }
 
         return MiraiMessageSource(re.source)

@@ -24,6 +24,7 @@ abstract class Message : Result(), MessagePlus {
 
     lateinit var source:MessageSource
     var reply: MessageSource? = null
+    var at = false
 
     lateinit var sourceMessage: String
     var body = ArrayList<MessageItem>()

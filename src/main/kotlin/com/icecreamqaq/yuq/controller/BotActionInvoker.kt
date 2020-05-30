@@ -39,6 +39,7 @@ open class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
             if (reMessage.qq == null && reMessage.group == null) {
                 val message = context.message!!
 
+                reMessage.temp = message.temp
                 reMessage.qq = message.qq
                 reMessage.group = message.group
             }
