@@ -47,16 +47,27 @@ interface Group : Contact {
 
 interface Member : Contact {
 
-    val group: Long
+    val group: Group
+    val permission: Int
 
     val nameCard: String
     val title: String
 
+    val ban: Int
+    fun isBan() = ban > 0
+    fun ban(time:Int)
+    fun unBan()
+
     override fun convertMessage(message: Message): Message {
         message.temp = true
-        message.group = group
+        message.group = group.id
         message.qq = id
         return message
     }
+
+    fun isAdmin() = permission > 0
+    fun isOwner() = permission == 2
+
+    fun kick(message: String = "")
 
 }

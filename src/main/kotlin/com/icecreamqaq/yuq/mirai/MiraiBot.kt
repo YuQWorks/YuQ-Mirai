@@ -32,6 +32,7 @@ import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendReque
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeMessages
 import net.mamoe.mirai.message.FriendMessageEvent
+import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.TempMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 import net.mamoe.mirai.message.data.*
@@ -98,7 +99,7 @@ class MiraiBot : YuQ, ApplicationService {
     override fun refreshFriends(): Map<Long, Friend> {
         val friends = HashMap<Long, MiraiFriend>(bot.friends.size)
         for (friend in bot.friends) {
-            friends[friend.id] = MiraiFriend(friend.id, friend.avatarUrl, friend.nick, this)
+            friends[friend.id] = MiraiFriend(friend, this)
         }
         this.friends = friends
         return friends
@@ -107,11 +108,7 @@ class MiraiBot : YuQ, ApplicationService {
     override fun refreshGroups(): Map<Long, Group> {
         val groups = HashMap<Long, MiraiGroup>(bot.groups.size)
         for (group in bot.groups) {
-            val groupMembers = HashMap<Long, MiraiGroupMember>(group.members.size)
-            for (member in group.members) {
-                groupMembers[member.id] = MiraiGroupMember(member.id, member.avatarUrl, member.nick, group.id, member.nameCard, member.specialTitle, this)
-            }
-            groups[group.id] = MiraiGroup(group.id, group.avatarUrl, group.name, groupMembers, this)
+            groups[group.id] = MiraiGroup(group, this)
         }
         this.groups = groups
         return groups
@@ -153,7 +150,7 @@ class MiraiBot : YuQ, ApplicationService {
                 message.qq = this.sender.id
                 message.group = when (this) {
                     is TempMessageEvent -> this.sender.group.id
-                    is GroupMessageEvent -> this.subject.id
+                    is MiraiGroupMessageEvent -> this.subject.id
                     else -> null
                 }
 
@@ -169,7 +166,7 @@ class MiraiBot : YuQ, ApplicationService {
                         is PlainText -> {
                             val sm = m.content.trim()
                             if (sm.isEmpty()) continue@loop
-                            val sms = sm.split(" ")
+                            val sms = sm.replace("\n", " ").split(" ")
                             var loopStart = 0
                             if (itemNum == 0 && botName != null && sms[0] == botName) loopStart = 1
                             for (i in loopStart until sms.size) {
@@ -239,48 +236,49 @@ class MiraiBot : YuQ, ApplicationService {
             if (eventBus.post(e) && e.accept) it.accept()
         }
         bot.subscribeAlways<MemberJoinRequestEvent> {
-            val e = GroupInviteEvent(this.groupId, 0, "")
+            val e = GroupMemberRequestEvent(groups[this.groupId]!!, this.fromId, this.fromNick, this.message)
             if (eventBus.post(e) && e.accept) it.accept()
         }
 
         // 好友部分变动监听
         bot.subscribeAlways<FriendAddEvent> {
-            this@MiraiBot.friends[friend.id] = MiraiFriend(friend.id, friend.avatarUrl, friend.nick, this@MiraiBot)
+            this@MiraiBot.friends[friend.id] = MiraiFriend(friend, this@MiraiBot)
         }
         bot.subscribeAlways<FriendDeleteEvent> {
             this@MiraiBot.friends.remove(friend.id)
         }
         bot.subscribeAlways<FriendRemarkChangeEvent> {
-            this@MiraiBot.friends[friend.id]?.name = friend.nick
+//            this@MiraiBot.friends[friend.id]?.name = friend.nick
         }
 
         // 群部分变动监听
         bot.subscribeAlways<BotJoinGroupEvent> {
-            val groupMembers = HashMap<Long, MiraiGroupMember>(group.members.size)
-            for (member in group.members) {
-                groupMembers[member.id] = MiraiGroupMember(member.id, member.avatarUrl, member.nick, group.id, member.nameCard, member.specialTitle, this@MiraiBot)
-            }
-            this@MiraiBot.groups[group.id] = MiraiGroup(group.id, group.avatarUrl, group.name, groupMembers, this@MiraiBot)
+            this@MiraiBot.groups[group.id] = MiraiGroup(group, this@MiraiBot)
         }
         bot.subscribeAlways<BotLeaveEvent> {
             this@MiraiBot.groups.remove(group.id)
         }
         bot.subscribeAlways<GroupNameChangeEvent> {
-            this@MiraiBot.groups[group.id]?.name = group.name
+//            this@MiraiBot.groups[group.id]?.name = group.name
+        }
+        bot.subscribeAlways<MemberPermissionChangeEvent> {
+//            this@MiraiBot.groups[group.id]!!.members[member.id]!!.permission = new.level
         }
 
         // 群成员部分变动监听
         bot.subscribeAlways<MemberJoinEvent> {
-            this@MiraiBot.groups[member.group.id]?.members?.set(member.id, MiraiGroupMember(member.id, member.avatarUrl, member.nick, group.id, member.nameCard, member.specialTitle, this@MiraiBot))
+            val group = this@MiraiBot.groups[member.group.id] ?: return@subscribeAlways
+            val member = MiraiGroupMember(member, group)
+            group.members[member.id] = member
         }
         bot.subscribeAlways<MemberLeaveEvent> {
             this@MiraiBot.groups[member.group.id]?.members?.remove(member.id)
         }
         bot.subscribeAlways<MemberCardChangeEvent> {
-            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.nameCard = member.nameCard
+//            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.nameCard = member.nameCard
         }
         bot.subscribeAlways<MemberSpecialTitleChangeEvent> {
-            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.title = member.specialTitle
+//            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.title = member.specialTitle
         }
 
 

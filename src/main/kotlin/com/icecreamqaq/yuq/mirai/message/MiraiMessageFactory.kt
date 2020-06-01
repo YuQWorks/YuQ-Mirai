@@ -20,7 +20,7 @@ class MiraiMessageFactory : MessageFactory {
         return message
     }
 
-    override fun newTemp(qq: Long, group: Long): Message {
+    override fun newTemp(group: Long, qq: Long): Message {
         val message = MiraiMessage()
         message.temp = true
         message.qq = qq
