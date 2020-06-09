@@ -54,9 +54,9 @@ class BotReflectMethodInvoker(private val method: Method, private val instance: 
                 1 -> {
                     val pv = mp.data as PathVar
                     when {
-                        context.message!!.body.size <= pv.value -> null
-                        pv.type == PathVar.Type.Source -> context.message!!.body[pv.value]
-                        else -> context.message!!.body[pv.value].convertByPathVar(pv.type)
+                        context.message!!.path.size <= pv.value -> null
+                        pv.type == PathVar.Type.Source -> context.message!!.path[pv.value]
+                        else -> context.message!!.path[pv.value].convertByPathVar(pv.type)
                     }
                 }
                 else -> null

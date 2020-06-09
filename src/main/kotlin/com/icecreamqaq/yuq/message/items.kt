@@ -29,5 +29,5 @@ interface Image : MessageItem {
 }
 
 interface NoImplItem : MessageItem {
-    val source: String
+    val source: Any
 }

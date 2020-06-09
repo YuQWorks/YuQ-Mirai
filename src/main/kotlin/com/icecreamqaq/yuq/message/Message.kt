@@ -26,12 +26,13 @@ abstract class Message : Result(), MessagePlus {
     var reply: MessageSource? = null
     var at = false
 
-    lateinit var sourceMessage: String
+    lateinit var sourceMessage: Any
     var body = ArrayList<MessageItem>()
+    lateinit var path:List<MessageItem>
 
     fun toPath(): List<String> {
         val paths = ArrayList<String>()
-        for (item in body) {
+        for (item in path) {
             paths.add(item.toPath())
         }
         return paths

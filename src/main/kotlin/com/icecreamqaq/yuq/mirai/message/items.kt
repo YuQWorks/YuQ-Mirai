@@ -58,9 +58,9 @@ class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
 class FaceImpl(override val faceId: Int) : MiraiMessageItemBase(), Face {
 
     override fun toLocal(source: Any, message: Message) = net.mamoe.mirai.message.data.Face(faceId)
-    override fun toPath() = "表情"
+    override fun toPath() = "表情_$faceId"
     override fun convertByPathVar(type: PathVar.Type) = when (type) {
-        PathVar.Type.String -> "表情"
+        PathVar.Type.String -> "表情_$faceId"
         PathVar.Type.Integer -> faceId
         PathVar.Type.Long -> faceId.toLong()
         PathVar.Type.Double -> faceId.toDouble()
@@ -106,7 +106,7 @@ class ImageReceive(override val id: String, override val url: String) : MiraiMes
 
 }
 
-class NoImplItemImpl(override var source: String) : MiraiMessageItemBase(), NoImplItem {
+class NoImplItemImpl(override var source: Any) : MiraiMessageItemBase(), NoImplItem {
     override fun toLocal(source: Any, message: Message) = source
     override fun toPath() = "NoImpl"
     override fun convertByPathVar(type: PathVar.Type) = null

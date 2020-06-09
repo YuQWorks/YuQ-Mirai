@@ -46,6 +46,7 @@ open class BotActionInvoker(level: Int) : DefaultActionInvoker(level) {
         context.result = reMessage
 
         if (reply) reMessage?.reply = context.message?.source
+        if (at) reMessage?.at = true
         return true
     }
 

@@ -5,7 +5,6 @@ import com.IceCreamQAQ.Yu.`as`.ApplicationService
 import com.IceCreamQAQ.Yu.annotation.Config
 import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.RouterPlus
-import com.IceCreamQAQ.Yu.di.BeanFactory
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.icecreamqaq.yuq.YuQ
@@ -14,11 +13,10 @@ import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.entity.Friend
 import com.icecreamqaq.yuq.entity.Group
-import com.icecreamqaq.yuq.entity.Member
 import com.icecreamqaq.yuq.event.*
 import com.icecreamqaq.yuq.message.Message
+import com.icecreamqaq.yuq.message.MessageItem
 import com.icecreamqaq.yuq.message.MessageSource
-import com.icecreamqaq.yuq.mirai.controller.MiraiBotActionContext
 import com.icecreamqaq.yuq.mirai.entity.MiraiFriend
 import com.icecreamqaq.yuq.mirai.entity.MiraiGroup
 import com.icecreamqaq.yuq.mirai.entity.MiraiGroupMember
@@ -86,7 +84,9 @@ class MiraiBot : YuQ, ApplicationService {
     override lateinit var groups: HashMap<Long, MiraiGroup>
 
     override fun init() {
-        bot = Bot(qq.toLong(), pwd)
+        bot = Bot(qq.toLong(), pwd){
+            fileBasedDeviceInfo()
+        }
         runBlocking {
             bot.alsoLogin()
         }
@@ -154,8 +154,9 @@ class MiraiBot : YuQ, ApplicationService {
                     else -> null
                 }
 
-                message.sourceMessage = messageSource
+                message.sourceMessage = this.message
 
+                val pathBody = ArrayList<MessageItem>()
                 val messageBody = message.body
 
                 var itemNum = 0
@@ -164,38 +165,57 @@ class MiraiBot : YuQ, ApplicationService {
                         is MiraiSource -> continue@loop
                         is QuoteReply -> message.reply = MiraiMessageSource(m.source)
                         is PlainText -> {
+                            messageBody.add(TextImpl(m.content))
                             val sm = m.content.trim()
                             if (sm.isEmpty()) continue@loop
                             val sms = sm.replace("\n", " ").split(" ")
                             var loopStart = 0
                             if (itemNum == 0 && botName != null && sms[0] == botName) loopStart = 1
                             for (i in loopStart until sms.size) {
-                                messageBody.add(TextImpl(sms[i]))
+                                pathBody.add(TextImpl(sms[i]))
                                 itemNum++
                             }
                         }
                         is At -> {
+                            val item = AtImpl(m.target)
+                            messageBody.add(item)
                             if (itemNum == 0 && m.target == qqLong) continue@loop
-                            messageBody.add(AtImpl(m.target))
+                            pathBody.add(item)
+                            itemNum++
+                        }
+                        is Face ->{
+                            val item=(FaceImpl(m.id))
+                            messageBody.add(item)
+                            pathBody.add(item)
                             itemNum++
                         }
                         is OnlineImage -> {
-                            messageBody.add(ImageReceive(m.imageId, m.originUrl))
+                            val item =(ImageReceive(m.imageId, m.originUrl))
+                            messageBody.add(item)
+                            pathBody.add(item)
                             itemNum++
                         }
                         else -> {
-                            messageBody.add(NoImplItemImpl(m.toString()))
+                            val item = NoImplItemImpl(m)
+                            messageBody.add(item)
+                            pathBody.add(item)
                             itemNum++
                         }
                     }
                 }
 
-                if (messageBody.size == 0) return@always
+                message.path = pathBody
 
                 if (
-                        if (temp) eventBus.post(PrivateMessageEvent(message))
-                        else eventBus.post(GroupMessageEvent(message))
+                        when (this) {
+                            is TempMessageEvent -> eventBus.post(PrivateMessageEvent(message))
+                            is FriendMessageEvent -> eventBus.post(PrivateMessageEvent(message))
+                            is MiraiGroupMessageEvent -> eventBus.post(GroupMessageEvent(message))
+                            else -> false
+                        }
                 ) return@always
+
+                if (pathBody.size == 0) return@always
 
                 val actionContext = BotActionContext()
                 val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
@@ -211,7 +231,7 @@ class MiraiBot : YuQ, ApplicationService {
 
                 when {
                     session.context != null -> contextRouter.invoke(session.context!!, actionContext)
-                    temp -> priv.invoke(actionContext.path[0], actionContext)
+                    temp || message.group == null -> priv.invoke(actionContext.path[0], actionContext)
                     else -> group.invoke(actionContext.path[0], actionContext)
                 }
 
@@ -284,7 +304,7 @@ class MiraiBot : YuQ, ApplicationService {
 
         bot.subscribeAlways<MessageRecallEvent> {
             eventBus.post(when (this) {
-                is MessageRecallEvent.GroupRecall -> GroupRecallEvent(this.group.id, this.authorId, this.operator!!.id, this.messageId)
+                is MessageRecallEvent.GroupRecall -> GroupRecallEvent(this.group.id, this.authorId, this.operator?.id ?: qqLong, this.messageId)
                 is MessageRecallEvent.FriendRecall -> PrivateRecallEvent(this.authorId, this.operator, this.messageId)
             })
         }
