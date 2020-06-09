@@ -25,6 +25,9 @@ import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.event.events.*
+import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
+import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
+import net.mamoe.mirai.event.events.FriendDeleteEvent as MiraiFriendDeleteEvent
 import net.mamoe.mirai.event.events.MessageRecallEvent
 import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
@@ -84,7 +87,7 @@ class MiraiBot : YuQ, ApplicationService {
     override lateinit var groups: HashMap<Long, MiraiGroup>
 
     override fun init() {
-        bot = Bot(qq.toLong(), pwd){
+        bot = Bot(qq.toLong(), pwd) {
             fileBasedDeviceInfo()
         }
         runBlocking {
@@ -183,14 +186,14 @@ class MiraiBot : YuQ, ApplicationService {
                             pathBody.add(item)
                             itemNum++
                         }
-                        is Face ->{
-                            val item=(FaceImpl(m.id))
+                        is Face -> {
+                            val item = (FaceImpl(m.id))
                             messageBody.add(item)
                             pathBody.add(item)
                             itemNum++
                         }
                         is OnlineImage -> {
-                            val item =(ImageReceive(m.imageId, m.originUrl))
+                            val item = (ImageReceive(m.imageId, m.originUrl))
                             messageBody.add(item)
                             pathBody.add(item)
                             itemNum++
@@ -261,22 +264,30 @@ class MiraiBot : YuQ, ApplicationService {
         }
 
         // 好友部分变动监听
-        bot.subscribeAlways<FriendAddEvent> {
-            this@MiraiBot.friends[friend.id] = MiraiFriend(friend, this@MiraiBot)
+        bot.subscribeAlways<MiraiFriendAddEvent> {
+            val friend = MiraiFriend(friend, this@MiraiBot)
+            this@MiraiBot.friends[friend.id] = friend
+            eventBus.post(FriendAddEvent(friend))
         }
-        bot.subscribeAlways<FriendDeleteEvent> {
+        bot.subscribeAlways<MiraiFriendDeleteEvent> {
+            val friend = this@MiraiBot.friends[friend.id] ?: return@subscribeAlways
             this@MiraiBot.friends.remove(friend.id)
+            eventBus.post(FriendDeleteEvent(friend))
         }
         bot.subscribeAlways<FriendRemarkChangeEvent> {
 //            this@MiraiBot.friends[friend.id]?.name = friend.nick
         }
 
         // 群部分变动监听
-        bot.subscribeAlways<BotJoinGroupEvent> {
-            this@MiraiBot.groups[group.id] = MiraiGroup(group, this@MiraiBot)
+        bot.subscribeAlways<MiraiBotJoinGroupEvent> {
+            val group = MiraiGroup(group, this@MiraiBot)
+            this@MiraiBot.groups[group.id] = group
+            eventBus.post(BotJoinGroupEvent(group))
         }
         bot.subscribeAlways<BotLeaveEvent> {
+            val group = this@MiraiBot.groups[group.id] ?: return@subscribeAlways
             this@MiraiBot.groups.remove(group.id)
+            eventBus.post(BotLevelGroupEvent(group))
         }
         bot.subscribeAlways<GroupNameChangeEvent> {
 //            this@MiraiBot.groups[group.id]?.name = group.name
@@ -290,9 +301,17 @@ class MiraiBot : YuQ, ApplicationService {
             val group = this@MiraiBot.groups[member.group.id] ?: return@subscribeAlways
             val member = MiraiGroupMember(member, group)
             group.members[member.id] = member
+            eventBus.post(if (this is MemberJoinEvent.Invite) GroupMemberInviteEvent(group, member, member) else GroupMemberJoinEvent(group, member))
         }
         bot.subscribeAlways<MemberLeaveEvent> {
-            this@MiraiBot.groups[member.group.id]?.members?.remove(member.id)
+            val group = this@MiraiBot.groups[member.group.id] ?: return@subscribeAlways
+            val member = group[member.id]
+            group.members.remove(member.id)
+            eventBus.post(
+                    if (this is MemberLeaveEvent.Kick) GroupMemberKickEvent(group, member, group.members[operator?.id]
+                            ?: group.bot)
+                    else GroupMemberLeaveEvent(group, member)
+            )
         }
         bot.subscribeAlways<MemberCardChangeEvent> {
 //            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.nameCard = member.nameCard
@@ -304,7 +323,8 @@ class MiraiBot : YuQ, ApplicationService {
 
         bot.subscribeAlways<MessageRecallEvent> {
             eventBus.post(when (this) {
-                is MessageRecallEvent.GroupRecall -> GroupRecallEvent(this.group.id, this.authorId, this.operator?.id ?: qqLong, this.messageId)
+                is MessageRecallEvent.GroupRecall -> GroupRecallEvent(this.group.id, this.authorId, this.operator?.id
+                        ?: qqLong, this.messageId)
                 is MessageRecallEvent.FriendRecall -> PrivateRecallEvent(this.authorId, this.operator, this.messageId)
             })
         }
