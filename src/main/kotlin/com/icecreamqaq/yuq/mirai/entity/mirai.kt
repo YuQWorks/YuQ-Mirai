@@ -28,12 +28,14 @@ class MiraiGroup(private val group:net.mamoe.mirai.contact.Group, yuq: YuQ): Mir
         get() = group.name
 
     override val members: MutableMap<Long, MiraiGroupMember>
+    override val bot: Member
 
     init {
         members = HashMap(group.members.size)
         for (member in group.members) {
             members[member.id] = MiraiGroupMember(member, this)
         }
+        bot = MiraiGroupMember(group.botAsMember,this)
     }
 }
 

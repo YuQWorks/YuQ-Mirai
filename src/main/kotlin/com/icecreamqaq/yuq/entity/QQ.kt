@@ -32,6 +32,7 @@ interface Friend : Contact {
 interface Group : Contact {
 
     val members: Map<Long, Member>
+    val bot:Member
 
     operator fun get(qq: Long): Member {
         return members[qq] ?: error("Member $qq Not Found!")
