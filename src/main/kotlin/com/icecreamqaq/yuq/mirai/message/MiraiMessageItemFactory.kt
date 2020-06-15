@@ -4,17 +4,13 @@ import com.icecreamqaq.yuq.message.*
 import java.io.File
 
 class MiraiMessageItemFactory : MessageItemFactory {
-    override fun text(text: String): Text {
-        return TextImpl(text)
-    }
 
-    override fun at(qq: Long): At {
-        return AtImpl(qq)
-    }
+    override fun text(text: String) = TextImpl(text)
 
-    override fun face(id: Int): Face {
-        return FaceImpl(id)
-    }
+    override fun at(qq: Long) = AtImpl(qq)
+
+    override fun face(id: Int) = FaceImpl(id)
+
 
     override fun image(file: File): Image {
         val image = ImageSend()
@@ -25,4 +21,12 @@ class MiraiMessageItemFactory : MessageItemFactory {
     override fun image(url: String): Image {
         TODO("Not yet implemented")
     }
+
+    override fun voice(file: File): Voice {
+        TODO("Not yet implemented")
+    }
+
+    override fun xmlEx(value: String) = XmlImpl(value)
+
+    override fun jsonEx(value: String) = JsonImpl(value)
 }

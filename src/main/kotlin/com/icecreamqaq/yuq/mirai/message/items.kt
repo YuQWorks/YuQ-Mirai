@@ -2,12 +2,14 @@ package com.icecreamqaq.yuq.mirai.message
 
 import com.icecreamqaq.yuq.annotation.PathVar
 import com.icecreamqaq.yuq.message.*
+import com.icecreamqaq.yuq.message.At
+import com.icecreamqaq.yuq.message.Face
+import com.icecreamqaq.yuq.message.Image
+import com.icecreamqaq.yuq.message.Message
 import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
-import net.mamoe.mirai.message.data.OfflineFriendImage
-import net.mamoe.mirai.message.data.OnlineFriendImage
-import net.mamoe.mirai.message.data.PlainText
+import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.utils.toExternalImage
 import java.io.File
 import java.lang.RuntimeException
@@ -87,6 +89,36 @@ class ImageSend : MiraiMessageItemBase(), Image {
     override fun toPath() = "图片"
     override fun convertByPathVar(type: PathVar.Type) = null
 
+}
+
+class XmlImpl(override val value: String) : MiraiMessageItemBase(), XmlEx {
+
+    override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
+        PathVar.Type.String -> value
+        PathVar.Type.Source -> this
+        else -> null
+    }
+
+    override fun toLocal(source: Any, message: Message) = ServiceMessage(60, value)
+
+    override fun toPath(): String {
+        return "XmlMsg"
+    }
+}
+
+class JsonImpl(override val value: String) : MiraiMessageItemBase(), JsonEx {
+
+    override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
+        PathVar.Type.String -> value
+        PathVar.Type.Source -> this
+        else -> null
+    }
+
+    override fun toLocal(source: Any, message: Message) = LightApp(value)
+
+    override fun toPath(): String {
+        return "JsonMsg"
+    }
 }
 
 class ImageReceive(override val id: String, override val url: String) : MiraiMessageItemBase(), Image {
