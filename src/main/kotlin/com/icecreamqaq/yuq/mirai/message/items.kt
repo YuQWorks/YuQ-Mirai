@@ -24,7 +24,7 @@ abstract class MiraiMessageItemBase : MessageItem {
 class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 
     override fun toLocal(source: Any, message: Message) = PlainText(text)
-    override fun toPath() = text
+    override fun toPath() = text.replace("\n", "\\n")
     override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
         PathVar.Type.Source -> this
         PathVar.Type.String -> text
