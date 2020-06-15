@@ -6,7 +6,7 @@
 
     <groupId>com.IceCreamQAQ.YuQ</groupId>
     <artifactId>YuQ-Mirai</artifactId>
-    <version>0.0.1.0-SNAPSHOT</version>
+    <version>0.0.1.6-SNAPSHOT</version>
 
     <parent>
         <groupId>com.IceCreamQAQ</groupId>
@@ -17,14 +17,20 @@
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
 
-        <Yu-Core.version>0.1.0.0-SNAPSHOT</Yu-Core.version>
-        <YuQ.version>0.0.1.0-SNAPSHOT</YuQ.version>
+        <YuQ.version>0.0.1.2</YuQ.version>
         <mirai.version>1.0.2</mirai.version>
+        <Yu-Core.version>0.1.0.2-SNAPSHOT</Yu-Core.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.IceCreamQAQ</groupId>
+            <artifactId>Yu-Core</artifactId>
+            <version>${Yu-Core.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -43,6 +49,7 @@
             <artifactId>mirai-core-qqandroid</artifactId>
             <version>${mirai.version}</version>
         </dependency>
+
 
     </dependencies>
 

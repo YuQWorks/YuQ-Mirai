@@ -12,9 +12,10 @@ class YuQMiraiStart {
         fun start(){
             val classloader = AppClassloader(YuQMiraiStart::class.java.classLoader)
             val blackList = ArrayList<String>(1)
-            blackList.add("net.mamoe.mirai.")
+//            blackList.add("net.mamoe.mirai.")
+            AppClassloader.registerBackList(blackList)
 //            blackList.add("okhttp3.")
-            classloader.registerBackList(blackList)
+//            classloader.registerBackList(blackList)
 
             val yuClass = classloader.loadClass("com.IceCreamQAQ.Yu.DefaultApp")
             val start: Method? = yuClass.getMethod("start")
