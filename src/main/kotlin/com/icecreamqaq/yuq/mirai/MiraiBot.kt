@@ -3,6 +3,7 @@ package com.icecreamqaq.yuq.mirai
 import com.IceCreamQAQ.Yu.AppLogger
 import com.IceCreamQAQ.Yu.`as`.ApplicationService
 import com.IceCreamQAQ.Yu.annotation.Config
+import com.IceCreamQAQ.Yu.annotation.Default
 import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.RouterPlus
 import com.IceCreamQAQ.Yu.di.YuContext
@@ -17,14 +18,19 @@ import com.icecreamqaq.yuq.event.*
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageItem
 import com.icecreamqaq.yuq.message.MessageSource
+import com.icecreamqaq.yuq.mf
+import com.icecreamqaq.yuq.mif
 import com.icecreamqaq.yuq.mirai.entity.MiraiFriend
 import com.icecreamqaq.yuq.mirai.entity.MiraiGroup
 import com.icecreamqaq.yuq.mirai.entity.MiraiGroupMember
+import com.icecreamqaq.yuq.mirai.logger.Network
 import com.icecreamqaq.yuq.mirai.message.*
+import com.icecreamqaq.yuq.yuq
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.event.events.*
+import net.mamoe.mirai.event.events.GroupMemberEvent
 import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
 import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
 import net.mamoe.mirai.event.events.FriendDeleteEvent as MiraiFriendDeleteEvent
@@ -37,11 +43,17 @@ import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.TempMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 import net.mamoe.mirai.message.data.*
+import net.mamoe.mirai.utils.*
+import org.slf4j.LoggerFactory
 
 import javax.inject.Inject
 import javax.inject.Named
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 class MiraiBot : YuQ, ApplicationService {
+
+    private val log = LoggerFactory.getLogger(MiraiBot::class.java)
 
     @Config("YuQ.Mirai.user.qq")
     private lateinit var qq: String
@@ -51,6 +63,10 @@ class MiraiBot : YuQ, ApplicationService {
 
     @Config("YuQ.bot.name")
     private var botName: String? = null
+
+    @Config("YuQ.Mirai.protocol")
+    @Default("HD")
+    private lateinit var protocol: String
 
     @Inject
     @field:Named("group")
@@ -86,9 +102,21 @@ class MiraiBot : YuQ, ApplicationService {
     override lateinit var friends: HashMap<Long, MiraiFriend>
     override lateinit var groups: HashMap<Long, MiraiGroup>
 
+
+//    var DefaultLogger: (identity: String?) -> MiraiLogger = { YuQMiraiLogger }
+
     override fun init() {
+//        if (protocol == "Android")
+//            BotConfiguration.Default.protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+        mif = messageItemFactory
+        mf = messageFactory
+        yuq = this
+
         bot = Bot(qq.toLong(), pwd) {
             fileBasedDeviceInfo()
+            if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+            networkLoggerSupplier = { Network("Net ${it.id}") }
+            botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
         }
         runBlocking {
             bot.alsoLogin()
@@ -137,11 +165,6 @@ class MiraiBot : YuQ, ApplicationService {
 
                 val messageSource = this.message.toString()
 
-                logger.logDebug(
-                        "MiraiBot",
-                        "Receive Message, Sender: ${this.sender.id}(${this.subject.id}), MessageBody: $messageSource."
-                )
-
                 val message = MiraiMessage()
 
                 val miraiSource = this.message[MiraiSource] ?: return@always
@@ -186,6 +209,12 @@ class MiraiBot : YuQ, ApplicationService {
                             pathBody.add(item)
                             itemNum++
                         }
+                        is AtAll -> {
+                            val item = (AtImpl(-1L))
+                            messageBody.add(item)
+                            pathBody.add(item)
+                            itemNum++
+                        }
                         is Face -> {
                             val item = (FaceImpl(m.id))
                             messageBody.add(item)
@@ -209,6 +238,9 @@ class MiraiBot : YuQ, ApplicationService {
 
                 message.path = pathBody
 
+                log.info("Receive Message: $message")
+
+
                 if (
                         when (this) {
                             is TempMessageEvent -> eventBus.post(PrivateMessageEvent(message))
@@ -225,12 +257,15 @@ class MiraiBot : YuQ, ApplicationService {
 
                 val session = sessionCache[sessionId] ?: {
                     val session = ContextSession(sessionId)
+                    eventBus.post(ContextSessionCreateEvent(session))
                     sessionCache[sessionId] = session
                     session
                 }()
 
                 actionContext.session = session
                 actionContext.message = message
+
+                if (eventBus.post(ActionContextInvokeEvent.Per(actionContext))) return@always
 
                 when {
                     session.context != null -> contextRouter.invoke(session.context!!, actionContext)
@@ -239,6 +274,8 @@ class MiraiBot : YuQ, ApplicationService {
                 }
 
                 session.context = actionContext.nextContext?.router
+
+                eventBus.post(ActionContextInvokeEvent.Post(actionContext))
 
                 if (session.context != null) {
                     val msg = contextRouter.routers[session.context!!]?.tips?.get(actionContext.nextContext?.status)
@@ -320,6 +357,31 @@ class MiraiBot : YuQ, ApplicationService {
 //            this@MiraiBot.groups[member.group.id]?.members?.get(member.id)?.title = member.specialTitle
         }
 
+        fun GroupMemberEvent.getMember() = this@MiraiBot.groups[this.group.id]?.get(this.member.id)
+
+        bot.subscribeAlways<MemberMuteEvent> {
+            val member = this.getMember() ?: return@subscribeAlways
+            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator?.id ?: -1)
+                    ?: this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
+            eventBus.post(GroupBanMemberEvent(member, op, this.durationSeconds))
+        }
+        bot.subscribeAlways<MemberUnmuteEvent> {
+            val member = this.getMember() ?: return@subscribeAlways
+            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator?.id ?: -1)
+                    ?: this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
+            eventBus.post(GroupUnBanMemberEvent(member, op))
+        }
+        bot.subscribeAlways<BotMuteEvent> {
+            val member = this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
+            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator.id) ?: return@subscribeAlways
+            eventBus.post(GroupBanBotEvent(member, op, this.durationSeconds))
+        }
+        bot.subscribeAlways<BotUnmuteEvent> {
+            val member = this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
+            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator.id) ?: return@subscribeAlways
+            eventBus.post(GroupUnBanBotEvent(member, op))
+        }
+
 
         bot.subscribeAlways<MessageRecallEvent> {
             eventBus.post(when (this) {
@@ -331,6 +393,7 @@ class MiraiBot : YuQ, ApplicationService {
     }
 
     override fun sendMessage(message: Message): MessageSource {
+        log.info("SendMessage: $message")
         var mm: MessageChain = buildMessageChain {}
 
         if (message.reply != null) mm += QuoteReply((message.reply as MiraiMessageSource).source)
@@ -340,20 +403,26 @@ class MiraiBot : YuQ, ApplicationService {
             mm += messageItem.toLocal(bot, message) as net.mamoe.mirai.message.data.Message
         }
 
-        val re = runBlocking {
-            when {
-                message.temp -> bot.groups[message.group!!][message.qq!!].sendMessage(mm)
-                message.group != null -> bot.groups[message.group!!].sendMessage(mm)
-                else -> bot.friends[message.qq!!].sendMessage(mm)
-            }
-        }
+        val re =
+                try {
+                    runBlocking {
+                        when {
+                            message.temp -> bot.groups[message.group!!][message.qq!!].sendMessage(mm)
+                            message.group != null -> bot.groups[message.group!!].sendMessage(mm)
+                            else -> bot.friends[message.qq!!].sendMessage(mm)
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.info("SendMessage Fail!", e)
+                    throw  e
+                }
 
+        log.info("SendMessage Success!")
         return MiraiMessageSource(re.source)
     }
 
     override fun recallMessage(messageSource: MessageSource): Int {
         return messageSource.recall()
     }
-
 
 }
