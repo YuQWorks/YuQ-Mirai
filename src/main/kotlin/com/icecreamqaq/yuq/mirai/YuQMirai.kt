@@ -6,24 +6,13 @@ import com.IceCreamQAQ.Yu.di.ConfigManager
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.IceCreamQAQ.Yu.event.events.AppStartEvent
-import com.IceCreamQAQ.Yu.job.JobManager_
-import com.IceCreamQAQ.Yu.loader.AppLoader_
-import com.icecreamqaq.yuq.mirai.message.MiraiMessageFactory
-import com.icecreamqaq.yuq.mirai.message.MiraiMessageItemFactory
+import com.IceCreamQAQ.Yu.job.JobManager
+import com.IceCreamQAQ.Yu.loader.AppLoader
 import kotlinx.coroutines.runBlocking
-import net.mamoe.mirai.Bot
-import net.mamoe.mirai.alsoLogin
-import net.mamoe.mirai.event.events.NewFriendRequestEvent
-import net.mamoe.mirai.event.subscribeAlways
-import net.mamoe.mirai.event.subscribeMessages
-import net.mamoe.mirai.join
 import javax.inject.Inject
 
 @NotSearch
 class YuQMirai {
-
-//    @Inject
-//    private lateinit var loader: AppLoader_
 
     @Inject
     private lateinit var eventBus: EventBus
@@ -32,7 +21,7 @@ class YuQMirai {
     private lateinit var miraiBot: MiraiBot
 
     @Inject
-    private lateinit var jobManager: JobManager_
+    private lateinit var jobManager: JobManager
 
     init {
         val logger = DefaultApp.PrintAppLog()
@@ -46,7 +35,7 @@ class YuQMirai {
         val bot = context[MiraiBot::class.java]!!
         bot.init()
 
-        val loader = context[AppLoader_::class.java]!!
+        val loader = context[AppLoader::class.java]!!
         loader.load()
 
         context.injectBean(this)
