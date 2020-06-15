@@ -297,7 +297,9 @@ class MiraiBot : YuQ, ApplicationService {
         }
         bot.subscribeAlways<MemberJoinRequestEvent> {
             val e = GroupMemberRequestEvent(groups[this.groupId]!!, this.fromId, this.fromNick, this.message)
-            if (eventBus.post(e) && e.accept) it.accept()
+            if (eventBus.post(e) && e.accept!= null)
+                if (e.accept!!) it.accept()
+                else it.reject(e.blackList)
         }
 
         // 好友部分变动监听
@@ -361,13 +363,13 @@ class MiraiBot : YuQ, ApplicationService {
 
         bot.subscribeAlways<MemberMuteEvent> {
             val member = this.getMember() ?: return@subscribeAlways
-            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator?.id ?: -1)
+            val op = this@MiraiBot.groups[this.group.id]?.members?.get(this.operator?.id ?: -1)
                     ?: this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
             eventBus.post(GroupBanMemberEvent(member, op, this.durationSeconds))
         }
         bot.subscribeAlways<MemberUnmuteEvent> {
             val member = this.getMember() ?: return@subscribeAlways
-            val op = this@MiraiBot.groups[this.group.id]?.get(this.operator?.id ?: -1)
+            val op = this@MiraiBot.groups[this.group.id]?.members?.get(this.operator?.id ?: -1)
                     ?: this@MiraiBot.groups[this.group.id]?.bot ?: return@subscribeAlways
             eventBus.post(GroupUnBanMemberEvent(member, op))
         }
