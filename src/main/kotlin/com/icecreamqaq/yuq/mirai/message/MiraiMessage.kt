@@ -20,22 +20,6 @@ class MiraiMessage : Message() {
         message.group = this.group
         return message
     }
-
-    override fun toString(): String {
-        val sb = StringBuilder("Sender: $qq, ")
-        if (group != null) sb.append("Group: $group, ")
-        if (temp) sb.append("Temp Message, ")
-        if (reply != null) sb.append("Reply To: ${reply!!.id}, ")
-        if (at) sb.append("At them, ")
-        if (body.size > 0) {
-            sb.append("Body: [ ${body[0].toPath()}")
-            for (i in 1 until body.size) {
-                sb.append(", ${body[i].toPath()}")
-            }
-            sb.append(" ]")
-        }
-        return sb.toString()
-    }
 }
 
 class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource) : MessageSource {

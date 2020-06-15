@@ -17,7 +17,7 @@
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
 
-        <YuQ.version>0.0.1.2</YuQ.version>
+        <YuQ.version>0.0.1.3-SNAPSHOT</YuQ.version>
         <mirai.version>1.0.2</mirai.version>
         <Yu-Core.version>0.1.0.2-SNAPSHOT</Yu-Core.version>
 
