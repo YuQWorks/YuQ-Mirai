@@ -44,8 +44,11 @@ class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
 
     override fun toLocal(source: Any, message: Message) =
-            if (source !is Bot) throw RuntimeException("Not Allow Invoke")
-            else net.mamoe.mirai.message.data.At(source.groups[message.group!!][user])
+            when {
+                source !is Bot -> throw RuntimeException("Not Allow Invoke")
+                user == -1L -> AtAll
+                else -> net.mamoe.mirai.message.data.At(source.groups[message.group!!][user])
+            }
 
     override fun toPath() = "At_$user"
     override fun convertByPathVar(type: PathVar.Type) = when (type) {
