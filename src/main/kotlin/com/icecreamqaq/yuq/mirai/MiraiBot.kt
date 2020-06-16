@@ -297,7 +297,7 @@ class MiraiBot : YuQ, ApplicationService {
         }
         bot.subscribeAlways<MemberJoinRequestEvent> {
             val e = GroupMemberRequestEvent(groups[this.groupId]!!, this.fromId, this.fromNick, this.message)
-            if (eventBus.post(e) && e.accept!= null)
+            if (eventBus.post(e) && e.accept != null)
                 if (e.accept!!) it.accept()
                 else it.reject(e.blackList)
         }
@@ -411,7 +411,7 @@ class MiraiBot : YuQ, ApplicationService {
                         when {
                             message.temp -> bot.groups[message.group!!][message.qq!!].sendMessage(mm)
                             message.group != null -> bot.groups[message.group!!].sendMessage(mm)
-                            else -> bot.friends[message.qq!!].sendMessage(mm)
+                            else -> bot.friends[message.qq ?: error("Message Receiver Not Found!")].sendMessage(mm)
                         }
                     }
                 } catch (e: Exception) {
