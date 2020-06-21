@@ -5,6 +5,7 @@ import com.IceCreamQAQ.Yu.`as`.ApplicationService
 import com.IceCreamQAQ.Yu.annotation.Config
 import com.IceCreamQAQ.Yu.annotation.Default
 import com.IceCreamQAQ.Yu.cache.EhcacheHelp
+import com.IceCreamQAQ.Yu.controller.router.NewRouter
 import com.IceCreamQAQ.Yu.controller.router.RouterPlus
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
@@ -12,6 +13,7 @@ import com.icecreamqaq.yuq.YuQ
 import com.icecreamqaq.yuq.controller.BotActionContext
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
+import com.icecreamqaq.yuq.controller.NewBotActionContext
 import com.icecreamqaq.yuq.entity.Friend
 import com.icecreamqaq.yuq.entity.Group
 import com.icecreamqaq.yuq.event.*
@@ -70,11 +72,11 @@ class MiraiBot : YuQ, ApplicationService {
 
     @Inject
     @field:Named("group")
-    private lateinit var group: RouterPlus
+    private lateinit var group: NewRouter
 
     @Inject
     @field:Named("priv")
-    private lateinit var priv: RouterPlus
+    private lateinit var priv: NewRouter
 
     @Inject
     private lateinit var contextRouter: ContextRouter
@@ -114,7 +116,7 @@ class MiraiBot : YuQ, ApplicationService {
 
         bot = Bot(qq.toLong(), pwd) {
             fileBasedDeviceInfo()
-            if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+//            if (this@MiraiBot.protocol == "Android") protocol = MiraiProtocol.ANDROID_PHONE
             networkLoggerSupplier = { Network("Net ${it.id}") }
             botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
         }
@@ -221,8 +223,8 @@ class MiraiBot : YuQ, ApplicationService {
                             pathBody.add(item)
                             itemNum++
                         }
-                        is OnlineImage -> {
-                            val item = (ImageReceive(m.imageId, m.originUrl))
+                        is Image -> {
+                            val item = (ImageReceive(m.imageId, m.queryUrl()))
                             messageBody.add(item)
                             pathBody.add(item)
                             itemNum++
@@ -252,7 +254,7 @@ class MiraiBot : YuQ, ApplicationService {
 
                 if (pathBody.size == 0) return@always
 
-                val actionContext = BotActionContext()
+                val actionContext = NewBotActionContext()
                 val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
 
                 val session = sessionCache[sessionId] ?: {
@@ -282,7 +284,7 @@ class MiraiBot : YuQ, ApplicationService {
                     if (msg != null)
                         sendMessage(actionContext.message!!.newMessage().plus(msg))
                 }
-                sendMessage((actionContext.result ?: return@always) as Message)
+                sendMessage((actionContext.reMessage ?: return@always) as Message)
             }
         }
 

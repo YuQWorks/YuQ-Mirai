@@ -26,7 +26,7 @@ class MiraiMessageItemFactory : MessageItemFactory {
         TODO("Not yet implemented")
     }
 
-    override fun xmlEx(value: String) = XmlImpl(value)
+    override fun xmlEx(serviceId: Int, value: String): XmlEx = XmlImpl(serviceId, value)
 
     override fun jsonEx(value: String) = JsonImpl(value)
 }

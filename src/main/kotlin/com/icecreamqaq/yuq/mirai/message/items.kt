@@ -19,12 +19,13 @@ abstract class MiraiMessageItemBase : MessageItem {
     override operator fun plus(item: String): Message = toMessage() + item
     override operator fun plus(item: Message): Message = toMessage() + item
     override fun toMessage(): Message = MiraiMessage() + this
+    override fun toString() = toPath()
 }
 
 class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 
     override fun toLocal(source: Any, message: Message) = PlainText(text)
-    override fun toPath() = text.replace("\n", "\\n")
+    override fun toPath() = text
     override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
         PathVar.Type.Source -> this
         PathVar.Type.String -> text
@@ -39,6 +40,8 @@ class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
         PathVar.Type.Double -> text.toDouble()
         else -> null
     }
+
+    override fun toString() = "\"" + text.replace("\n", "\\n") + "\""
 }
 
 class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
@@ -94,7 +97,7 @@ class ImageSend : MiraiMessageItemBase(), Image {
 
 }
 
-class XmlImpl(override val value: String) : MiraiMessageItemBase(), XmlEx {
+class XmlImpl(override val serviceId: Int, override val value: String) : MiraiMessageItemBase(), XmlEx {
 
     override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
         PathVar.Type.String -> value
@@ -102,11 +105,9 @@ class XmlImpl(override val value: String) : MiraiMessageItemBase(), XmlEx {
         else -> null
     }
 
-    override fun toLocal(source: Any, message: Message) = ServiceMessage(60, value)
+    override fun toLocal(source: Any, message: Message) = ServiceMessage(serviceId, value)
 
-    override fun toPath(): String {
-        return "XmlMsg"
-    }
+    override fun toPath() = "XmlMsg"
 }
 
 class JsonImpl(override val value: String) : MiraiMessageItemBase(), JsonEx {
@@ -119,9 +120,8 @@ class JsonImpl(override val value: String) : MiraiMessageItemBase(), JsonEx {
 
     override fun toLocal(source: Any, message: Message) = LightApp(value)
 
-    override fun toPath(): String {
-        return "JsonMsg"
-    }
+    override fun toPath() = "JsonMsg"
+
 }
 
 class ImageReceive(override val id: String, override val url: String) : MiraiMessageItemBase(), Image {
