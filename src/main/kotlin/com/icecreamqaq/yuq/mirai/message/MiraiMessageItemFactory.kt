@@ -1,9 +1,16 @@
 package com.icecreamqaq.yuq.mirai.message
 
+import com.IceCreamQAQ.Yu.`as`.ApplicationService
+import com.IceCreamQAQ.Yu.util.IO
+import com.IceCreamQAQ.Yu.util.Web
 import com.icecreamqaq.yuq.message.*
 import java.io.File
+import javax.inject.Inject
 
-class MiraiMessageItemFactory : MessageItemFactory {
+class MiraiMessageItemFactory : MessageItemFactory ,ApplicationService {
+
+    @Inject
+    private lateinit var web: Web
 
     override fun text(text: String) = TextImpl(text)
 
@@ -19,7 +26,9 @@ class MiraiMessageItemFactory : MessageItemFactory {
     }
 
     override fun image(url: String): Image {
-        TODO("Not yet implemented")
+        val file = IO.tmpFile()
+        web.download(url, file)
+        return image(file)
     }
 
     override fun voice(file: File): Voice {
@@ -29,4 +38,13 @@ class MiraiMessageItemFactory : MessageItemFactory {
     override fun xmlEx(serviceId: Int, value: String): XmlEx = XmlImpl(serviceId, value)
 
     override fun jsonEx(value: String) = JsonImpl(value)
+    override fun init() {
+
+    }
+
+    override fun start() {
+    }
+
+    override fun stop() {
+    }
 }
