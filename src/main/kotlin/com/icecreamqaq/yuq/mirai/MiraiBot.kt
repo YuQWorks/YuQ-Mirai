@@ -6,14 +6,12 @@ import com.IceCreamQAQ.Yu.annotation.Config
 import com.IceCreamQAQ.Yu.annotation.Default
 import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.NewRouter
-import com.IceCreamQAQ.Yu.controller.router.RouterPlus
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
 import com.icecreamqaq.yuq.YuQ
 import com.icecreamqaq.yuq.controller.BotActionContext
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
-import com.icecreamqaq.yuq.controller.NewBotActionContext
 import com.icecreamqaq.yuq.entity.Friend
 import com.icecreamqaq.yuq.entity.Group
 import com.icecreamqaq.yuq.event.*
@@ -254,7 +252,7 @@ class MiraiBot : YuQ, ApplicationService {
 
                 if (pathBody.size == 0) return@always
 
-                val actionContext = NewBotActionContext()
+                val actionContext = BotActionContext()
                 val sessionId = if (temp) "t_" else "" + message.qq + "_" + message.group
 
                 val session = sessionCache[sessionId] ?: {
