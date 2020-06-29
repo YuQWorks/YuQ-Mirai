@@ -1,7 +1,4 @@
-<div align="center">
 YuQ-Mirai 是一个以 [Mirai](https://github.com/mamoe/mirai) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
-</div>
-
 
  - 路由映射
  - 依赖注入
@@ -48,5 +45,5 @@ public class GroupMenu{
 这样，我们就可以很轻易的完成 ban 这个指令了。
 
 对于需要连续对话的指令式机器人，基于 YuQ 也可以轻松满足。  
-<img width="300" src="readme/img/Context.png" alt="Context">
+<img width="400" src="readme/img/Context.png" alt="Context">
 
