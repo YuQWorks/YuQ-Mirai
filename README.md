@@ -1,8 +1,7 @@
 <div align="center">
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.IceCreamQAQ.YuQ/YuQ-Mirai/badge.svg)](https://search.maven.org/#search|ga|1|com.IceCreamQAQ.YuQ.YuQ-Mirai)
-
 YuQ-Mirai 是一个以 [Mirai](https://github.com/mamoe/mirai) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
 </div>
+
 
  - 路由映射
  - 依赖注入
@@ -11,6 +10,9 @@ YuQ-Mirai 是一个以 [Mirai](https://github.com/mamoe/mirai) 为基础，并�
  - 上下文消息
  
 YuQ-Mirai 使用 Kotlin 开发，并且完美支持 Java 与 Kotlin。 
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.IceCreamQAQ.YuQ/YuQ-Mirai/badge.svg)](https://search.maven.org/#search|ga|1|com.IceCreamQAQ.YuQ.YuQ-Mirai)
+
  
 在 YuQ 我们仅需很简单的代码，就可以完成很复杂的功能。  
 比如，我们要针对一个指令"菜单"，进行一个标准的菜单消息回复。
@@ -45,6 +47,6 @@ public class GroupMenu{
 ```
 这样，我们就可以很轻易的完成 ban 这个指令了。
 
-对于需要连续对话的指令式机器人，基于 YuQ 也可以轻松满足。
+对于需要连续对话的指令式机器人，基于 YuQ 也可以轻松满足。  
 <img width="300" src="readme/img/Context.png" alt="Context">
 
