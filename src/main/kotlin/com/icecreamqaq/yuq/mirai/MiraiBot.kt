@@ -106,15 +106,12 @@ class MiraiBot : YuQ, ApplicationService {
 //    var DefaultLogger: (identity: String?) -> MiraiLogger = { YuQMiraiLogger }
 
     override fun init() {
-//        if (protocol == "Android")
-//            BotConfiguration.Default.protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
         mif = messageItemFactory
         mf = messageFactory
         yuq = this
 
         bot = Bot(qq.toLong(), pwd) {
             fileBasedDeviceInfo()
-//            if (this@MiraiBot.protocol == "Android") protocol = MiraiProtocol.ANDROID_PHONE
             networkLoggerSupplier = { Network("Net ${it.id}") }
             botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
         }
@@ -151,7 +148,7 @@ class MiraiBot : YuQ, ApplicationService {
     }
 
     override fun stop() {
-
+        bot.close()
     }
 
     fun startBot() {
@@ -261,6 +258,8 @@ class MiraiBot : YuQ, ApplicationService {
                     sessionCache[sessionId] = session
                     session
                 }()
+
+                val t = this@MiraiBot
 
                 actionContext.session = session
                 actionContext.message = message
