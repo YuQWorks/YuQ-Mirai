@@ -6,19 +6,36 @@
 
     <groupId>com.IceCreamQAQ.YuQ</groupId>
     <artifactId>YuQ-Mirai</artifactId>
-    <version>0.0.1.7-SNAPSHOT</version>
+    <version>0.0.2.2</version>
+
+    <name>YuQ-Mirai</name>
+    <description>YuQ-Mirai is a simple qq robot Framework.</description>
+    <url>https://github.com/YuQWorks/YuQ-Mirai</url>
+
+    <scm>
+        <url>https://github.com/YuQWorks/YuQ-Mirai</url>
+        <connection>scm:git:https://github.com/YuQWorks/YuQ-Mirai.git</connection>
+        <developerConnection>scm:git:ssh://github.com:YuQWorks/YuQ-Mirai.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>IceCream</name>
+            <email>www@withdata.net</email>
+        </developer>
+    </developers>
 
     <parent>
         <groupId>com.IceCreamQAQ</groupId>
         <artifactId>IceCream-parent</artifactId>
-        <version>1.0.0.0-SNAPSHOT</version>
+        <version>1.0.0.2</version>
     </parent>
 
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
 
-        <YuQ.version>0.0.1.6-SNAPSHOT</YuQ.version>
-        <mirai.version>1.1-EA</mirai.version>
+        <mirai.version>1.0.2</mirai.version>
+        <YuQ.version>0.0.2.1</YuQ.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>
@@ -89,8 +106,12 @@
 
     <repositories>
         <repository>
-            <id>IceCream</id>
-            <url>http://maven.icecreamqaq.com/repository/maven-public/</url>
+            <id>central</id>
+            <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com/</url>
         </repository>
     </repositories>
 </project>
