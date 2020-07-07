@@ -35,9 +35,9 @@ public class GroupMenu{
      @Inject
      private YuQ yuq;
         
-     @Action("ban")
-     public String ban(long group, @PathVar(value = 1,type = PathVar.Type.Long)long ban, @PathVar(value = 2,type = PathVar.Type.Integer)int time){
-         yuq.getGroups().get(group).get(ban).ban(time);
+     @Action("ban {ban} {time}")
+     public String ban(Member ban, int time){
+         ban.ban(time);
          return "好的！";
      }
 }
