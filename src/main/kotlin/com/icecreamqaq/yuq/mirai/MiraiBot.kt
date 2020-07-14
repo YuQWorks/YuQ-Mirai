@@ -31,25 +31,28 @@ import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.event.events.GroupMemberEvent
-import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
-import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
-import net.mamoe.mirai.event.events.FriendDeleteEvent as MiraiFriendDeleteEvent
 import net.mamoe.mirai.event.events.MessageRecallEvent
-import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeMessages
 import net.mamoe.mirai.message.FriendMessageEvent
-import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.TempMessageEvent
-import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 import net.mamoe.mirai.message.data.*
-import net.mamoe.mirai.utils.*
+import net.mamoe.mirai.utils.BotConfiguration
 import org.slf4j.LoggerFactory
-
 import javax.inject.Inject
 import javax.inject.Named
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.collections.Map
+import kotlin.collections.get
+import kotlin.collections.set
+import kotlin.coroutines.resume
+import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
+import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
+import net.mamoe.mirai.event.events.FriendDeleteEvent as MiraiFriendDeleteEvent
+import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
+import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
+import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 
 class MiraiBot : YuQ, ApplicationService {
 
@@ -114,6 +117,7 @@ class MiraiBot : YuQ, ApplicationService {
             fileBasedDeviceInfo()
             networkLoggerSupplier = { Network("Net ${it.id}") }
             botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
+            if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
         }
         runBlocking {
             bot.alsoLogin()
@@ -259,29 +263,35 @@ class MiraiBot : YuQ, ApplicationService {
                     session
                 }()
 
-                val t = this@MiraiBot
+//                val t = this@MiraiBot
 
                 actionContext.session = session
                 actionContext.message = message
 
-                if (eventBus.post(ActionContextInvokeEvent.Per(actionContext))) return@always
+                actionContext["session"] = session
 
-                when {
-                    session.context != null -> contextRouter.invoke(session.context!!, actionContext)
-                    temp || message.group == null -> priv.invoke(actionContext.path[0], actionContext)
-                    else -> group.invoke(actionContext.path[0], actionContext)
+                if (session.suspendCoroutineIt != null) {
+                    session.suspendCoroutineIt!!.resume(message)
+                } else {
+                    if (eventBus.post(ActionContextInvokeEvent.Per(actionContext))) return@always
+
+                    when {
+                        session.context != null -> contextRouter.invoke(session.context!!, actionContext)
+                        temp || message.group == null -> priv.invoke(actionContext.path[0], actionContext)
+                        else -> group.invoke(actionContext.path[0], actionContext)
+                    }
+
+                    session.context = actionContext.nextContext?.router
+
+                    eventBus.post(ActionContextInvokeEvent.Post(actionContext))
+
+                    if (session.context != null) {
+                        val msg = contextRouter.routers[session.context!!]?.tips?.get(actionContext.nextContext?.status)
+                        if (msg != null)
+                            sendMessage(actionContext.message!!.newMessage().plus(msg))
+                    }
+                    sendMessage((actionContext.reMessage ?: return@always))
                 }
-
-                session.context = actionContext.nextContext?.router
-
-                eventBus.post(ActionContextInvokeEvent.Post(actionContext))
-
-                if (session.context != null) {
-                    val msg = contextRouter.routers[session.context!!]?.tips?.get(actionContext.nextContext?.status)
-                    if (msg != null)
-                        sendMessage(actionContext.message!!.newMessage().plus(msg))
-                }
-                sendMessage((actionContext.reMessage ?: return@always) as Message)
             }
         }
 
@@ -395,7 +405,7 @@ class MiraiBot : YuQ, ApplicationService {
 
     override fun sendMessage(message: Message): MessageSource {
         log.info("SendMessage: $message")
-        var mm: MessageChain = buildMessageChain {}
+        var mm = buildMessageChain {}
 
         if (message.reply != null) mm += QuoteReply((message.reply as MiraiMessageSource).source)
         if (message.at) mm += AtImpl(message.qq!!).toLocal(bot, message)

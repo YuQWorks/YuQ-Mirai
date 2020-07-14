@@ -50,9 +50,6 @@ class YuQMirai {
             miraiBot.startBot()
         }
 
-
-        println("过了！")
-
         eventBus.post(AppStartEvent())
     }
 
