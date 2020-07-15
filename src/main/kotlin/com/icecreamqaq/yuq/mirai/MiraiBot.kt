@@ -41,10 +41,6 @@ import net.mamoe.mirai.utils.BotConfiguration
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Named
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.Map
-import kotlin.collections.get
 import kotlin.collections.set
 import kotlin.coroutines.resume
 import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
@@ -118,6 +114,7 @@ class MiraiBot : YuQ, ApplicationService {
             networkLoggerSupplier = { Network("Net ${it.id}") }
             botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
             if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+            if (this@MiraiBot.protocol == "Watch") protocol = BotConfiguration.MiraiProtocol.ANDROID_WATCH
         }
         runBlocking {
             bot.alsoLogin()
@@ -224,6 +221,18 @@ class MiraiBot : YuQ, ApplicationService {
                         }
                         is Image -> {
                             val item = (ImageReceive(m.imageId, m.queryUrl()))
+                            messageBody.add(item)
+                            pathBody.add(item)
+                            itemNum++
+                        }
+                        is LightApp -> {
+                            val item = JsonImpl(m.content)
+                            messageBody.add(item)
+                            pathBody.add(item)
+                            itemNum++
+                        }
+                        is ServiceMessage -> {
+                            val item = XmlImpl(m.serviceId, m.content)
                             messageBody.add(item)
                             pathBody.add(item)
                             itemNum++
