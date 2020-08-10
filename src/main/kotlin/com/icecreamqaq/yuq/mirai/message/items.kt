@@ -1,27 +1,32 @@
 package com.icecreamqaq.yuq.mirai.message
 
 import com.icecreamqaq.yuq.annotation.PathVar
+import com.icecreamqaq.yuq.entity.Contact
 import com.icecreamqaq.yuq.message.*
+import com.icecreamqaq.yuq.mirai.entity.ContactImpl
+import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import kotlinx.coroutines.runBlocking
-import net.mamoe.mirai.Bot
 import net.mamoe.mirai.message.data.AtAll
 import net.mamoe.mirai.message.data.LightApp
 import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.message.data.ServiceMessage
 import net.mamoe.mirai.utils.toExternalImage
 import java.io.File
+import net.mamoe.mirai.contact.Member as MiraiMember
+import net.mamoe.mirai.message.data.At as MiraiAt
+import net.mamoe.mirai.message.data.Face as MiraiFace
 
 abstract class MiraiMessageItemBase : MessageItem {
     override operator fun plus(item: MessageItem): Message = toMessage() + item
     override operator fun plus(item: String): Message = toMessage() + item
     override operator fun plus(item: Message): Message = toMessage() + item
-    override fun toMessage(): Message = MiraiMessage() + this
+    override fun toMessage(): Message = Message() + this
     override fun toString() = toPath()
 }
 
 class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 
-    override fun toLocal(source: Any, message: Message) = PlainText(text)
+    override fun toLocal(contact: Contact) = PlainText(text)
     override fun toPath() = text
     override fun convertByPathVar(type: PathVar.Type): Any? = when (type) {
         PathVar.Type.Source -> this
@@ -52,12 +57,11 @@ class TextImpl(override var text: String) : MiraiMessageItemBase(), Text {
 
 class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
 
-    override fun toLocal(source: Any, message: Message) =
-            when {
-                source !is Bot -> throw RuntimeException("Not Allow Invoke")
-                user == -1L -> AtAll
-                else -> net.mamoe.mirai.message.data.At(source.groups[message.group!!][user])
-            }
+    override fun toLocal(contact: Contact) =
+            if (contact is GroupImpl)
+                if (user == -1L) AtAll
+                else MiraiAt(contact[user].miraiContact as MiraiMember)
+            else PlainText("@$user")
 
     override fun toPath() = "At_$user"
     override fun convertByPathVar(type: PathVar.Type) = when (type) {
@@ -79,7 +83,7 @@ class AtImpl(override var user: Long) : MiraiMessageItemBase(), At {
 
 class FaceImpl(override val faceId: Int) : MiraiMessageItemBase(), Face {
 
-    override fun toLocal(source: Any, message: Message) = net.mamoe.mirai.message.data.Face(faceId)
+    override fun toLocal(contact: Contact) = MiraiFace(faceId)
     override fun toPath() = "表情_$faceId"
     override fun convertByPathVar(type: PathVar.Type) = when (type) {
         PathVar.Type.String -> "表情_$faceId"
@@ -105,13 +109,10 @@ class ImageSend : MiraiMessageItemBase(), Image {
     override lateinit var url: String
     lateinit var imageFile: File
 
-    override fun toLocal(source: Any, message: Message): Any {
-        if (source !is Bot) throw RuntimeException("Not Allow Invoke")
+    override fun toLocal(contact: Contact): Any {
+        contact as ContactImpl
         val externalImage = imageFile.toExternalImage()
-        val image = runBlocking {
-            if (message.group == null) source.friends[message.qq!!].uploadImage(externalImage)
-            else source.groups[message.group!!].uploadImage(externalImage)
-        }
+        val image = runBlocking { contact.miraiContact.uploadImage(externalImage) }
         id = image.imageId
         return image
     }
@@ -140,7 +141,7 @@ class XmlImpl(override val serviceId: Int, override val value: String) : MiraiMe
         else -> null
     }
 
-    override fun toLocal(source: Any, message: Message) = ServiceMessage(serviceId, value)
+    override fun toLocal(contact: Contact) = ServiceMessage(serviceId, value)
 
     override fun toPath() = "XmlMsg"
     override fun equals(other: Any?): Boolean {
@@ -172,7 +173,7 @@ class JsonImpl(override val value: String) : MiraiMessageItemBase(), JsonEx {
         else -> null
     }
 
-    override fun toLocal(source: Any, message: Message) = LightApp(value)
+    override fun toLocal(contact: Contact) = LightApp(value)
 
     override fun toPath() = "JsonMsg"
     override fun equals(other: Any?): Boolean {
@@ -195,7 +196,7 @@ class JsonImpl(override val value: String) : MiraiMessageItemBase(), JsonEx {
 
 class ImageReceive(override val id: String, override val url: String) : MiraiMessageItemBase(), Image {
 
-    override fun toLocal(source: Any, message: Message) = net.mamoe.mirai.message.data.Image(id)
+    override fun toLocal(contact: Contact) = net.mamoe.mirai.message.data.Image(id)
 
     override fun toPath(): String {
         return "img_$id"
@@ -214,7 +215,6 @@ class ImageReceive(override val id: String, override val url: String) : MiraiMes
         other as ImageReceive
 
         if (id != other.id) return false
-        if (url != other.url) return false
 
         return true
     }
@@ -229,7 +229,7 @@ class ImageReceive(override val id: String, override val url: String) : MiraiMes
 }
 
 class NoImplItemImpl(override var source: Any) : MiraiMessageItemBase(), NoImplItem {
-    override fun toLocal(source: Any, message: Message) = source
+    override fun toLocal(contact: Contact) = source
     override fun toPath() = "NoImpl"
     override fun convertByPathVar(type: PathVar.Type) = null
 

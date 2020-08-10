@@ -1,25 +1,27 @@
 package com.icecreamqaq.yuq.mirai.message
 
+import com.icecreamqaq.yuq.entity.Contact
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageSource
+import com.icecreamqaq.yuq.mirai.MiraiBot
+import com.icecreamqaq.yuq.yuq
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.PermissionDeniedException
-import java.lang.StringBuilder
+import net.mamoe.mirai.message.data.MessageChain
+import net.mamoe.mirai.message.data.QuoteReply
+import net.mamoe.mirai.message.data.buildMessageChain
 
-class MiraiMessage : Message() {
+fun Message.toLocal(contact: Contact): MessageChain {
+    var mm = buildMessageChain {}
 
-    override fun plus(text: String): Message {
-        body.add(TextImpl(text))
-        return this
+    if (this.reply != null) mm += QuoteReply((this.reply as MiraiMessageSource).source)
+    if (this.at) mm += AtImpl(this.qq!!).toLocal(contact)
+
+    for (messageItem in this.body) {
+        mm += messageItem.toLocal(contact) as net.mamoe.mirai.message.data.Message
     }
 
-    override fun newMessage(): Message {
-        val message = MiraiMessage()
-        message.temp = this.temp
-        message.qq = this.qq
-        message.group = this.group
-        return message
-    }
+    return mm
 }
 
 class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource) : MessageSource {
