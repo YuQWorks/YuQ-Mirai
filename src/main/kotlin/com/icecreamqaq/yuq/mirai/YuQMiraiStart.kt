@@ -5,6 +5,11 @@ import com.IceCreamQAQ.Yu.loader.AppClassloader
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Method
 
+//@Deprecated(
+//        message = "建议使用 YuQ 提供的启动类，YuQStarter",
+//        level = DeprecationLevel.WARNING,
+//        replaceWith = ReplaceWith("YuQStarter", "com.icecreamqaq.yuq.YuQStarter")
+//)
 class YuQMiraiStart {
 
 
@@ -17,7 +22,7 @@ class YuQMiraiStart {
 
             val classloader = AppClassloader(YuQMiraiStart::class.java.classLoader)
             val blackList = ArrayList<String>(1)
-//            blackList.add("net.mamoe.mirai.")
+            blackList.add("net.mamoe.mirai.")
             AppClassloader.registerBackList(blackList)
 //            blackList.add("okhttp3.")
 //            classloader.registerBackList(blackList)

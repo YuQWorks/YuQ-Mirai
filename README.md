@@ -1,4 +1,4 @@
-YuQ-Mirai 是一个以 [Mirai](https://github.com/mamoe/mirai) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
+YuQ-Mirai 是一个以 [Mirai-Rain](https://github.com/YuQWorks/Mirai-Rain) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
 
  - 路由映射
  - 依赖注入
@@ -31,10 +31,7 @@ YuQ 会在指令式机器人的开发中，提供非常好的帮助，让开发�
 我们只需要编写：
 ```Java
 @GroupController
-public class GroupMenu{ 
-     @Inject
-     private YuQ yuq;
-        
+public class GroupMenu{
      @Action("ban {ban} {time}")
      public String ban(Member ban, int time){
          ban.ban(time);

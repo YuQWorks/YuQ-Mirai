@@ -3,8 +3,6 @@ package com.icecreamqaq.yuq.mirai.message
 import com.icecreamqaq.yuq.entity.Contact
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageSource
-import com.icecreamqaq.yuq.mirai.MiraiBot
-import com.icecreamqaq.yuq.yuq
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.PermissionDeniedException
 import net.mamoe.mirai.message.data.MessageChain

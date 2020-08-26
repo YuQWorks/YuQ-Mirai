@@ -1,12 +1,19 @@
 package com.icecreamqaq.yuq.mirai.entity
 
+import com.IceCreamQAQ.Yu.toJSONObject
 import com.icecreamqaq.yuq.entity.Contact
 import com.icecreamqaq.yuq.entity.Friend
 import com.icecreamqaq.yuq.entity.Group
 import com.icecreamqaq.yuq.entity.Member
+import com.icecreamqaq.yuq.event.SendMessageEvent
+import com.icecreamqaq.yuq.message.At
 import com.icecreamqaq.yuq.message.Message
+import com.icecreamqaq.yuq.mirai.localEventBus
+import com.icecreamqaq.yuq.mirai.message.AtImpl
 import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
 import com.icecreamqaq.yuq.mirai.message.toLocal
+import com.icecreamqaq.yuq.postWithQQKey
+import com.icecreamqaq.yuq.web
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import net.mamoe.mirai.contact.Contact as MiraiContact
@@ -19,9 +26,10 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
     private val log = LoggerFactory.getLogger(ContactImpl::class.java)
 
     override fun sendMessage(message: Message): MiraiMessageSource {
-        val ms = message.toString()
-        val ts = this.toString()
+        val ms = message.toLogString()
+        val ts = this.toLogString()
         log.debug("Send Message To: $ts, $ms")
+//        localEventBus.post(SendMessageEvent.Per(this,message))
         val m = MiraiMessageSource(
                 runBlocking {
                     miraiContact.sendMessage(message.toLocal(this@ContactImpl))
@@ -50,12 +58,25 @@ class FriendImpl(private val friend: MiraiFriend) : ContactImpl(friend), Friend 
 
 class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
+    override var maxCount: Int = 0
 
     override val avatar: String
         get() = group.avatarUrl
 
     override val name: String
         get() = group.name
+
+    init {
+        maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
+                mapOf(
+                        "gc" to id.toString(),
+                        "st" to 0.toString(),
+                        "end" to 15.toString(),
+                        "sort" to "0",
+                        "bkn" to "{gtk}"
+                ) as MutableMap<String, String>
+        ).toJSONObject().getIntValue("max_count")
+    }
 
     override fun leave() {
         runBlocking {
@@ -64,15 +85,24 @@ class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
     }
 
     override fun get(qq: Long): GroupMemberImpl {
-        return members[qq] ?: error("Member $qq Not Found!")
+        return members[qq] ?: if (qq == bot.id) bot else error("Member $qq Not Found!")
     }
+
+    override fun isFriend() = false
 
     override fun toString(): String {
         return "Group($name($id))"
     }
 
+    override fun banAll() {
+        group.settings.isMuteAll = true
+    }
+    override fun unBanAll() {
+        group.settings.isMuteAll = false
+    }
+
     override val members: MutableMap<Long, GroupMemberImpl>
-    override val bot: Member
+    override val bot: GroupMemberImpl
 
     init {
         members = HashMap(group.members.size)
@@ -96,6 +126,8 @@ class GroupMemberImpl(private val member: MiraiMember, override val group: Group
         }
     override val title
         get() = member.specialTitle
+
+    override fun at() = AtImpl(id)
 
     override val ban: Int
         get() {

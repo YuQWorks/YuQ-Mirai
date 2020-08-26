@@ -6,7 +6,7 @@
 
     <groupId>com.IceCreamQAQ.YuQ</groupId>
     <artifactId>YuQ-Mirai</artifactId>
-    <version>0.0.6.4</version>
+    <version>0.0.6.8</version>
 
     <name>YuQ-Mirai</name>
     <description>YuQ-Mirai is a simple qq robot Framework.</description>
@@ -34,8 +34,8 @@
     <properties>
         <kotlin.version>1.3.72</kotlin.version>
 
-        <mirai.version>1.1.3</mirai.version>
-        <YuQ.version>0.0.6.3</YuQ.version>
+        <mirai.version>1.1.10</mirai.version>
+        <YuQ.version>0.0.6.8</YuQ.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>
@@ -61,7 +61,7 @@
 <!--        </dependency>-->
 
         <dependency>
-            <groupId>net.mamoe</groupId>
+            <groupId>com.IceCreamQAQ.YuQ.YuQ-Mirai.Mirai-Rain</groupId>
             <artifactId>mirai-core-qqandroid</artifactId>
             <version>${mirai.version}</version>
         </dependency>
@@ -122,6 +122,10 @@
         <repository>
             <id>jcenter</id>
             <url>https://jcenter.bintray.com/</url>
+        </repository>
+        <repository>
+            <id>Bintray-IceCreamQAQ-Mirai</id>
+            <url>https://dl.bintray.com/icecreamqaq/mirai/</url>
         </repository>
     </repositories>
 </project>
