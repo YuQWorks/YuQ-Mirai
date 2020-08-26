@@ -433,8 +433,8 @@ open class MiraiBot : YuQ, ApplicationService, User {
             val group = this@MiraiBot.groups[group.id] ?: return@subscribeAlways
             this@MiraiBot.groups.remove(group.id)
             eventBus.post(
-                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group.get(operator.id), group)
-                    else BotLevelGroupEvent(group)
+                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group.get(operator.id))
+                    else BotLevelGroupEvent.Level(group)
             )
         }
         bot.subscribeAlways<GroupNameChangeEvent> {
