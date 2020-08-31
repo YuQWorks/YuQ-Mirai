@@ -433,7 +433,16 @@ open class MiraiBot : YuQ, ApplicationService, User {
             val group = this@MiraiBot.groups[group.id] ?: return@subscribeAlways
             this@MiraiBot.groups.remove(group.id)
             eventBus.post(
-                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group.get(operator.id))
+                    if (this is BotLeaveEvent.Kick) {
+                        // 过滤群匿名和坦白说
+                        when (operator.id) {
+                            // 坦白说
+                            50000000L -> BotLevelGroupEvent.Level(group)
+                            // 群匿名
+                            80000000L -> BotLevelGroupEvent.Level(group)
+                            else -> BotLevelGroupEvent.Kick(group[operator.id])
+                        }
+                    }
                     else BotLevelGroupEvent.Level(group)
             )
         }
