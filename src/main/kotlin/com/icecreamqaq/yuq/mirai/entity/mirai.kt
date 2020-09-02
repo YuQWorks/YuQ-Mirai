@@ -114,7 +114,7 @@ class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
 
 }
 
-class GroupMemberImpl(private val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member), Member {
+open class GroupMemberImpl(private val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member), Member {
 
     override val permission
         get() = member.permission.level
@@ -162,5 +162,12 @@ class GroupMemberImpl(private val member: MiraiMember, override val group: Group
     override val name
         get() = member.nick
 
+
+}
+
+class AnonymousMemberImpl(member: MiraiMember, group: GroupImpl) : GroupMemberImpl(member, group), AnonymousMember {
+
+    override fun canSendMessage() = false
+    override fun isFriend() = false
 
 }

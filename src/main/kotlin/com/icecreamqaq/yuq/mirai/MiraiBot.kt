@@ -9,9 +9,7 @@ import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.NewRouter
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
-import com.IceCreamQAQ.Yu.toJSONString
 import com.IceCreamQAQ.Yu.util.Web
-import com.alibaba.fastjson.JSON
 import com.icecreamqaq.yuq.*
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
@@ -21,6 +19,7 @@ import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageFactoryImpl
 import com.icecreamqaq.yuq.message.MessageItem
 import com.icecreamqaq.yuq.message.MessageSource
+import com.icecreamqaq.yuq.mirai.entity.AnonymousMemberImpl
 import com.icecreamqaq.yuq.mirai.entity.FriendImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
@@ -40,11 +39,8 @@ import net.mamoe.mirai.qqandroid.FPMM
 import net.mamoe.mirai.qqandroid.network.WLoginSigInfo
 import net.mamoe.mirai.utils.BotConfiguration
 import org.slf4j.LoggerFactory
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.collections.set
 import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
 import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
@@ -472,8 +468,8 @@ open class MiraiBot : YuQ, ApplicationService, User {
             val group = this@MiraiBot.groups[group.id] ?: return@subscribeAlways
             this@MiraiBot.groups.remove(group.id)
             eventBus.post(
-                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group.get(operator.id))
-                    else BotLevelGroupEvent.Level(group)
+                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group[operator.id])
+                    else BotLevelGroupEvent.Leave(group)
             )
         }
         bot.subscribeAlways<GroupNameChangeEvent> {
