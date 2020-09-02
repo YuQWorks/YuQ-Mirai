@@ -39,6 +39,7 @@ import net.mamoe.mirai.message.FriendMessageEvent
 import net.mamoe.mirai.message.TempMessageEvent
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.qqandroid.FPMM
+import net.mamoe.mirai.qqandroid.network.WLoginSigInfo
 import net.mamoe.mirai.utils.BotConfiguration
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -136,7 +137,7 @@ open class MiraiBot : YuQ, ApplicationService, User {
         yuq = this
         botId = qq.toLong()
         web = webImpl
-        eventBus
+        localEventBus = eventBus
 
 
         bot = Bot(botId, pwd) {
@@ -174,22 +175,21 @@ open class MiraiBot : YuQ, ApplicationService, User {
                 for (cf in field.type.declaredFields) {
                     if (cf.name == "wLoginSigInfo") {
                         cf.isAccessible = true
-                        val lsi = cf[client]
-                        val lsiJS = lsi.toJSONString()
-                        val lsiJO = JSON.parseObject(lsiJS)
-                        val sKey = String(Base64.getDecoder().decode(lsiJO.getJSONObject("sKey").getString("data")))
+                        val lsi = cf[client] as WLoginSigInfo
+//                        val lsiJS = lsi.toJSONString()
+//                        val lsiJO = JSON.parseObject(lsiJS)
+                        val sKey = String(lsi.sKey.data)
 
                         this.sKey = sKey
                         this.cookieEx.skey = sKey
                         this.gtk = f(sKey)
                         this.cookieEx.gtk = this.gtk
-                        this.superKey = String(Base64.getDecoder().decode(lsiJO.getString("superKey")))
+                        this.superKey = String(lsi.superKey)
 
-                        val psKeys = lsiJO.getJSONObject("psKeyMap")
+                        val psKeys = lsi.psKeyMap
 
-                        for (k in psKeys.keys) {
-                            val value = String(Base64.getDecoder().decode(psKeys.getJSONObject(k).getString("data"))
-                                    ?: continue)
+                        for ((k, v) in psKeys) {
+                            val value = String(v.data)
                             val pskey = YuQ.QQCookie.Pskey(value, f(value))
                             pskeyMap[k] = pskey
                             webImpl.saveCookie(k, "/", "p_skey", value)
