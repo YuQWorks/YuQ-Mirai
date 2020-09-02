@@ -15,9 +15,7 @@ import com.alibaba.fastjson.JSON
 import com.icecreamqaq.yuq.*
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
-import com.icecreamqaq.yuq.entity.Friend
-import com.icecreamqaq.yuq.entity.Group
-import com.icecreamqaq.yuq.entity.User
+import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.event.*
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageFactoryImpl
@@ -367,7 +365,19 @@ open class MiraiBot : YuQ, ApplicationService, User {
 
         // 新好友申请事件
         bot.subscribeAlways<MiraiNewFriendRequestEvent> {
-            val e = NewFriendRequestEvent(this.fromId, this.message)
+            val ui = UserInfo(
+                    id = this.fromId,
+                    avatar = "",
+                    name = this.fromNick,
+                    sex = UserSex.none,
+                    age = 0,
+                    qqAge = 0,
+                    level = 0,
+                    loginDays = 0,
+                    vips = listOf()
+            )
+            val g = this@MiraiBot.groups[this.fromGroupId]
+            val e = NewFriendRequestEvent(ui, g, this.message)
             if (eventBus.post(e)) {
                 when (e.accept) {
                     true -> {
@@ -382,7 +392,25 @@ open class MiraiBot : YuQ, ApplicationService, User {
         }
         // 机器人被邀请入群事件
         bot.subscribeAlways<BotInvitedJoinGroupRequestEvent> {
-            val e = GroupInviteEvent(this.groupId, this.invitorId, "")
+            val ui = UserInfo(
+                    id = this.invitorId,
+                    avatar = "",
+                    name = this.invitorNick,
+                    sex = UserSex.none,
+                    age = 0,
+                    qqAge = 0,
+                    level = 0,
+                    loginDays = 0,
+                    vips = listOf()
+            )
+            val gi = GroupInfo(
+                    id = this.groupId,
+                    name = this.groupName,
+                    maxCount = 0,
+                    owner = ui,
+                    admin = listOf()
+            )
+            val e = GroupInviteEvent(gi, ui, "")
             if (eventBus.post(e)) {
                 when (e.accept) {
                     true -> {
@@ -396,7 +424,18 @@ open class MiraiBot : YuQ, ApplicationService, User {
         }
         // 有新成员申请入群事件
         bot.subscribeAlways<MemberJoinRequestEvent> {
-            val e = GroupMemberRequestEvent(groups[this.groupId]!!, this.fromId, this.fromNick, this.message)
+            val ui = UserInfo(
+                    id = this.fromId,
+                    avatar = "",
+                    name = this.fromNick,
+                    sex = UserSex.none,
+                    age = 0,
+                    qqAge = 0,
+                    level = 0,
+                    loginDays = 0,
+                    vips = listOf()
+            )
+            val e = GroupMemberRequestEvent(groups[this.groupId]!!, ui, this.message)
             if (eventBus.post(e) && e.accept != null)
                 if (e.accept!!) {
                     it.accept()
