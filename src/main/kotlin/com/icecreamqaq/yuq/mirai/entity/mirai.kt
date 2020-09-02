@@ -1,12 +1,9 @@
 package com.icecreamqaq.yuq.mirai.entity
 
 import com.IceCreamQAQ.Yu.toJSONObject
-import com.icecreamqaq.yuq.entity.Contact
-import com.icecreamqaq.yuq.entity.Friend
-import com.icecreamqaq.yuq.entity.Group
-import com.icecreamqaq.yuq.entity.Member
+import com.icecreamqaq.yuq.entity.*
+import com.icecreamqaq.yuq.error.SendMessageFailedByCancel
 import com.icecreamqaq.yuq.event.SendMessageEvent
-import com.icecreamqaq.yuq.message.At
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.mirai.localEventBus
 import com.icecreamqaq.yuq.mirai.message.AtImpl
@@ -29,12 +26,13 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
         val ms = message.toLogString()
         val ts = this.toLogString()
         log.debug("Send Message To: $ts, $ms")
-//        localEventBus.post(SendMessageEvent.Per(this,message))
+        if (localEventBus.post(SendMessageEvent.Per(this, message))) throw SendMessageFailedByCancel()
         val m = MiraiMessageSource(
                 runBlocking {
                     miraiContact.sendMessage(message.toLocal(this@ContactImpl))
                 }.source
         )
+        localEventBus.post(SendMessageEvent.Post(this, message, m))
         log.info("$ts <- $ms")
         return m
     }
@@ -97,6 +95,7 @@ class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
     override fun banAll() {
         group.settings.isMuteAll = true
     }
+
     override fun unBanAll() {
         group.settings.isMuteAll = false
     }
