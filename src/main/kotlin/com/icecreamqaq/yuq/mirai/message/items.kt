@@ -7,6 +7,7 @@ import com.icecreamqaq.yuq.message.Face
 import com.icecreamqaq.yuq.message.FlashImage
 import com.icecreamqaq.yuq.message.Image
 import com.icecreamqaq.yuq.message.Voice
+import com.icecreamqaq.yuq.mif
 import com.icecreamqaq.yuq.mirai.entity.ContactImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import kotlinx.coroutines.runBlocking
@@ -59,7 +60,12 @@ class ImageSend(val ei: ExternalImage) : MessageItemBase(), Image {
 
 open class ImageReceive(override val id: String, override val url: String) : MessageItemBase(), Image {
 
-    override fun toLocal(contact: Contact) = MiraiImage(id) as Any
+    override fun toLocal(contact: Contact): Any {
+        val image = MiraiImage(id)
+        val cType = contact is GroupImpl
+        val iType = image is GroupImage
+        return if (cType == iType) image else runBlocking { mif.imageByUrl(image.queryUrl()).toLocal(contact) }
+    }
 
 }
 
