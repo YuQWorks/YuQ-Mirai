@@ -74,6 +74,8 @@ class FlashImageImpl(override val image: Image) : MessageItemBase(), FlashImage 
     override fun toLocal(contact: Contact): Any {
         return (image.toLocal(contact) as MiraiImage).flash()
     }
+
+    override fun toPath() = "闪照"
 }
 
 class VoiceRecv(
