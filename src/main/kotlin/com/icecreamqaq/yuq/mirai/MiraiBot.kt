@@ -49,7 +49,7 @@ import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendReque
 import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 
-open class MiraiBot : YuQ, ApplicationService, User {
+open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
 
     private val log = LoggerFactory.getLogger(MiraiBot::class.java)
 
@@ -221,6 +221,17 @@ open class MiraiBot : YuQ, ApplicationService, User {
     override fun start() {
         context.injectBean(rainBot)
         startBot()
+        Thread {
+            web.postJSON(
+                    "http://127.0.0.1:5460/YuQ/runInfo",
+                    mapOf(
+                            "uid" to botId,
+                            "yv" to apiVersion(),
+                            "rt" to runtimeName(),
+                            "rv" to runtimeVersion()
+                    )
+            )
+        }.start()
     }
 
     override fun stop() {
@@ -344,7 +355,12 @@ open class MiraiBot : YuQ, ApplicationService, User {
             message.group = this.subject.id
             message.qq = this.sender.id
 
-            val member = yuq.groups[this.subject.id]!![this.sender.id]
+            val group = groups[this.subject.id] ?: return@subscribeAlways
+            val member = when (this.sender.id) {
+                80000000L -> AnonymousMemberImpl(this.sender,group)
+                else -> group[this.sender.id]
+            }
+
             rainBot.receiveGroupMessage(member, message)
         }
 
@@ -572,6 +588,9 @@ open class MiraiBot : YuQ, ApplicationService, User {
     override fun canSendMessage() = false
 
     override fun isFriend() = false
+    override fun runtimeName() = "YuQ-Mirai"
+
+    override fun runtimeVersion() = "0.0.6.10"
 
 }
 
