@@ -13,7 +13,10 @@ fun Message.toLocal(contact: Contact): MessageChain {
     var mm = buildMessageChain {}
 
     if (this.reply != null) mm += QuoteReply((this.reply as MiraiMessageSource).source)
-    if (this.at) mm += AtImpl(this.qq!!).toLocal(contact)
+    if (this.at != null) {
+        mm += AtImpl(at!!.id).toLocal(contact)
+        if (at!!.newLine) mm += "\n"
+    }
 
     for (messageItem in this.body) {
         mm += messageItem.toLocal(contact) as net.mamoe.mirai.message.data.Message
