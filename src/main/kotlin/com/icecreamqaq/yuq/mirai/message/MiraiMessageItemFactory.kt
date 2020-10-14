@@ -3,10 +3,8 @@ package com.icecreamqaq.yuq.mirai.message
 import com.IceCreamQAQ.Yu.`as`.ApplicationService
 import com.IceCreamQAQ.Yu.util.IO
 import com.IceCreamQAQ.Yu.util.Web
-import com.icecreamqaq.yuq.message.Image
-import com.icecreamqaq.yuq.message.MessageItemFactory
-import com.icecreamqaq.yuq.message.Voice
-import com.icecreamqaq.yuq.message.XmlEx
+import com.icecreamqaq.yuq.entity.Member
+import com.icecreamqaq.yuq.message.*
 import com.icecreamqaq.yuq.web
 import net.mamoe.mirai.utils.toExternalImage
 import java.awt.image.BufferedImage
@@ -17,6 +15,9 @@ import javax.inject.Inject
 class MiraiMessageItemFactory : MessageItemFactory {
 
     override fun text(text: String) = TextImpl(text)
+    override fun at(member: Member): At {
+        TODO("Not yet implemented")
+    }
 
     override fun at(qq: Long) = AtImpl(qq)
 

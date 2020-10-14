@@ -16,7 +16,6 @@ import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.event.*
 import com.icecreamqaq.yuq.message.Message
-import com.icecreamqaq.yuq.message.MessageFactoryImpl
 import com.icecreamqaq.yuq.message.MessageItem
 import com.icecreamqaq.yuq.message.MessageSource
 import com.icecreamqaq.yuq.mirai.entity.AnonymousMemberImpl
@@ -49,7 +48,7 @@ import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendReque
 import net.mamoe.mirai.message.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 
-open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
+open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
 
     private val log = LoggerFactory.getLogger(MiraiBot::class.java)
 
@@ -82,9 +81,6 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
 
     @Inject
     lateinit var eventBus: EventBus
-
-    @Inject
-    override lateinit var messageFactory: MessageFactoryImpl
 
     @Inject
     override lateinit var messageItemFactory: MiraiMessageItemFactory
@@ -127,7 +123,7 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         FPMM.clear()
 
         mif = messageItemFactory
-        mf = messageFactory
+//        mf = messageFactory
         yuq = this
         botId = qq.toLong()
         web = webImpl
@@ -212,7 +208,12 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
     override fun refreshGroups(): Map<Long, Group> {
         val groups = HashMap<Long, GroupImpl>(bot.groups.size)
         for (group in bot.groups) {
-            groups[group.id] = GroupImpl(group)
+            try {
+                groups[group.id] = GroupImpl(group)
+            } catch (e: Exception) {
+                log.error("Load Group ${group.id} Error!", e)
+            }
+
         }
         this.groups = groups
         return groups
@@ -223,7 +224,7 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         startBot()
         Thread {
             web.postJSON(
-                    "http://127.0.0.1:5460/YuQ/runInfo",
+                    "http://yuq.icecreamqaq.com/YuQ/runInfo",
                     mapOf(
                             "uid" to botId,
                             "yv" to apiVersion(),
@@ -341,8 +342,8 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         // 好友消息事件
         bot.subscribeAlways<FriendMessageEvent> {
             val message = message.toMessage() ?: return@subscribeAlways
-            message.temp = false
-            message.qq = this.sender.id
+//            message.temp = false
+//            message.qq = this.sender.id
 
             val friend = yuq.friends[this.sender.id] ?: return@subscribeAlways
             rainBot.receivePrivateMessage(friend, message)
@@ -351,13 +352,13 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         // 群消息事件
         bot.subscribeAlways<MiraiGroupMessageEvent> {
             val message = message.toMessage() ?: return@subscribeAlways
-            message.temp = false
-            message.group = this.subject.id
-            message.qq = this.sender.id
+//            message.temp = false
+//            message.group = this.subject.id
+//            message.qq = this.sender.id
 
             val group = groups[this.subject.id] ?: return@subscribeAlways
             val member = when (this.sender.id) {
-                80000000L -> AnonymousMemberImpl(this.sender,group)
+                80000000L -> AnonymousMemberImpl(this.sender, group)
                 else -> group[this.sender.id]
             }
 
@@ -367,9 +368,9 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         // 临时会话事件
         bot.subscribeAlways<TempMessageEvent> {
             val message = message.toMessage() ?: return@subscribeAlways
-            message.temp = true
-            message.group = this.group.id
-            message.qq = this.sender.id
+//            message.temp = true
+//            message.group = this.group.id
+//            message.qq = this.sender.id
 
             val member = yuq.groups[this.sender.group.id]!![this.sender.id]
             rainBot.receivePrivateMessage(member, message)
@@ -484,8 +485,8 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
             val group = this@MiraiBot.groups[group.id] ?: return@subscribeAlways
             this@MiraiBot.groups.remove(group.id)
             eventBus.post(
-                    if (this is BotLeaveEvent.Kick) BotLevelGroupEvent.Kick(group[operator.id])
-                    else BotLevelGroupEvent.Leave(group)
+                    if (this is BotLeaveEvent.Kick) BotLeaveGroupEvent.Kick(group[operator.id])
+                    else BotLeaveGroupEvent.Leave(group)
             )
         }
         bot.subscribeAlways<GroupNameChangeEvent> {
@@ -493,6 +494,10 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         }
         bot.subscribeAlways<MemberPermissionChangeEvent> {
 //            this@MiraiBot.groups[group.id]!!.members[member.id]!!.permission = new.level
+//            when (new.level){
+//
+//            }
+            groups[group.id]?.refreshAdmin()
         }
 
         // 群成员部分变动监听
@@ -500,7 +505,7 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
             val group = this@MiraiBot.groups[member.group.id] ?: return@subscribeAlways
             val member = GroupMemberImpl(member, group)
             group.members[member.id] = member
-            eventBus.post(if (this is MemberJoinEvent.Invite) GroupMemberInviteEvent(group, member, member) else GroupMemberJoinEvent(group, member))
+            eventBus.post(if (this is MemberJoinEvent.Invite) GroupMemberInviteEvent(group, member, member) else GroupMemberJoinEvent.Join(group, member))
         }
         bot.subscribeAlways<MemberLeaveEvent> {
             val group = this@MiraiBot.groups[member.group.id] ?: return@subscribeAlways
@@ -509,7 +514,7 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
             eventBus.post(
                     if (this is MemberLeaveEvent.Kick) GroupMemberKickEvent(group, member, group.members[operator?.id]
                             ?: group.bot)
-                    else GroupMemberLeaveEvent(group, member)
+                    else GroupMemberLeaveEvent.Leave(group, member)
             )
         }
         bot.subscribeAlways<MemberCardChangeEvent> {
@@ -560,23 +565,23 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
         }
     }
 
-    override fun sendMessage(message: Message) =
-            when {
-                message.temp -> {
-                    groups[message.group!!]!![message.qq!!]
-                }
-                message.group != null -> {
-                    groups[message.group!!]!!
-                }
-                else -> {
-                    friends[message.qq!!]!!
-                }
-            }.sendMessage(message)
-
-
-    override fun recallMessage(messageSource: MessageSource): Int {
-        return messageSource.recall()
-    }
+//    override fun sendMessage(message: Message) =
+//            when {
+//                message.temp -> {
+//                    groups[message.group!!]!![message.qq!!]
+//                }
+//                message.group != null -> {
+//                    groups[message.group!!]!!
+//                }
+//                else -> {
+//                    friends[message.qq!!]!!
+//                }
+//            }.sendMessage(message)
+//
+//
+//    override fun recallMessage(messageSource: MessageSource): Int {
+//        return messageSource.recall()
+//    }
 
     override val avatar: String
         get() = bot.selfQQ.avatarUrl
@@ -590,7 +595,7 @@ open class MiraiBot : YuQ, ApplicationService, User,RainVersion {
     override fun isFriend() = false
     override fun runtimeName() = "YuQ-Mirai"
 
-    override fun runtimeVersion() = "0.0.6.10"
+    override fun runtimeVersion() = "0.1.0.0-Rain-DEV1"
 
 }
 

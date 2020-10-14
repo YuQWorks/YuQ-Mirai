@@ -1,6 +1,7 @@
 package com.icecreamqaq.yuq.mirai.message
 
 import com.icecreamqaq.yuq.entity.Contact
+import com.icecreamqaq.yuq.entity.Member
 import com.icecreamqaq.yuq.message.*
 import com.icecreamqaq.yuq.message.At
 import com.icecreamqaq.yuq.message.Face
@@ -10,6 +11,7 @@ import com.icecreamqaq.yuq.message.Voice
 import com.icecreamqaq.yuq.mif
 import com.icecreamqaq.yuq.mirai.entity.ContactImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupImpl
+import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.utils.ExternalImage
@@ -34,6 +36,10 @@ class AtImpl(override var user: Long) : MessageItemBase(), At {
                 else MiraiAt(contact[user].miraiContact as MiraiMember)
             else PlainText("@$user")
 
+}
+
+class AtMemberImpl(override val member: Member) : MessageItemBase(),AtByMember {
+    override fun toLocal(contact: Contact) = MiraiAt((member as GroupMemberImpl).miraiContact as MiraiMember)
 }
 
 class FaceImpl(override val faceId: Int) : MessageItemBase(), Face {

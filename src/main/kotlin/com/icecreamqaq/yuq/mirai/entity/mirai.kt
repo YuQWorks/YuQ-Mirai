@@ -9,8 +9,6 @@ import com.icecreamqaq.yuq.mirai.localEventBus
 import com.icecreamqaq.yuq.mirai.message.AtImpl
 import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
 import com.icecreamqaq.yuq.mirai.message.toLocal
-import com.icecreamqaq.yuq.postWithQQKey
-import com.icecreamqaq.yuq.web
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import net.mamoe.mirai.contact.Contact as MiraiContact
@@ -57,24 +55,53 @@ class FriendImpl(private val friend: MiraiFriend) : ContactImpl(friend), Friend 
 class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
     override var maxCount: Int = 0
+    override val admins = arrayListOf<GroupMemberImpl>()
 
     override val avatar: String
         get() = group.avatarUrl
 
-    override val name: String
-        get() = group.name
+    override val name: String = group.name
+    override val owner: Member
+
+    override val members: MutableMap<Long, GroupMemberImpl>
+    override val bot: GroupMemberImpl
 
     init {
-        maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
-                mapOf(
-                        "gc" to id.toString(),
-                        "st" to 0.toString(),
-                        "end" to 15.toString(),
-                        "sort" to "0",
-                        "bkn" to "{gtk}"
-                ) as MutableMap<String, String>
-        ).toJSONObject().getIntValue("max_count")
+        members = HashMap(group.members.size)
+        var owner: GroupMemberImpl? = null
+        for (member in group.members) {
+            val m = GroupMemberImpl(member, this)
+            members[member.id] = m
+            if (m.permission == 2) owner = m
+            if (m.permission == 1) admins.add(m)
+        }
+        bot = GroupMemberImpl(group.botAsMember, this)
+        this.owner = owner ?: if (bot.permission == 2) bot else error("Group $id Can't Find Owner!")
+
     }
+
+    fun refreshAdmin(){
+        admins.clear()
+        for (member in group.members) {
+            val m = GroupMemberImpl(member, this)
+            members[member.id] = m
+            if (m.permission == 1) admins.add(m)
+        }
+    }
+
+//    init {
+//        maxCount = -1
+//
+////        maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
+////                mapOf(
+////                        "gc" to id.toString(),
+////                        "st" to 0.toString(),
+////                        "end" to 15.toString(),
+////                        "sort" to "0",
+////                        "bkn" to "{gtk}"
+////                ) as MutableMap<String, String>
+////        ).toJSONObject().getIntValue("max_count")
+//    }
 
     override fun leave() {
         runBlocking {
@@ -98,17 +125,6 @@ class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
 
     override fun unBanAll() {
         group.settings.isMuteAll = false
-    }
-
-    override val members: MutableMap<Long, GroupMemberImpl>
-    override val bot: GroupMemberImpl
-
-    init {
-        members = HashMap(group.members.size)
-        for (member in group.members) {
-            members[member.id] = GroupMemberImpl(member, this)
-        }
-        bot = GroupMemberImpl(group.botAsMember, this)
     }
 
 

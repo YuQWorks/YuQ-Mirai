@@ -28,6 +28,11 @@ fun Message.toLocal(contact: Contact): MessageChain {
 class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource) : MessageSource {
     override val id: Int
         get() = source.id
+    override val liteMsg: String = source.contentToString()
+    override val sendTime: Long
+        get() = TODO("Not yet implemented")
+    override val sender: Long
+        get() = TODO("Not yet implemented")
 
     override fun recall(): Int {
         return runBlocking {
