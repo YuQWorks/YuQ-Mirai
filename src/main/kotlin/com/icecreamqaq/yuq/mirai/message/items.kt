@@ -15,6 +15,9 @@ import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.utils.ExternalImage
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
 import net.mamoe.mirai.contact.Member as MiraiMember
 import net.mamoe.mirai.message.data.At as MiraiAt
 import net.mamoe.mirai.message.data.Face as MiraiFace
@@ -38,7 +41,7 @@ class AtImpl(override var user: Long) : MessageItemBase(), At {
 
 }
 
-class AtMemberImpl(override val member: Member) : MessageItemBase(),AtByMember {
+class AtMemberImpl(override val member: Member) : MessageItemBase(), AtByMember {
     override fun toLocal(contact: Contact) = MiraiAt((member as GroupMemberImpl).miraiContact as MiraiMember)
 }
 
@@ -89,9 +92,31 @@ class VoiceRecv(
 ) : MessageItemBase(), Voice {
 
     override val id: String = miraiVoice.fileName
-    override val url: String = miraiVoice.url
+    override val url: String = miraiVoice.url ?: ""
 
     override fun toLocal(contact: Contact) = miraiVoice
+}
+
+class VoiceSend(val inputStream: InputStream):MessageItemBase(),Voice{
+
+    lateinit var miraiVoice: MiraiVoice
+
+    override val id: String
+        get() = miraiVoice.fileName
+    override val url: String
+        get() = miraiVoice.url ?: ""
+
+    override fun toLocal(contact: Contact): Any {
+        return if (::miraiVoice.isInitialized) miraiVoice
+        else if (contact is GroupImpl){
+            val v = runBlocking {
+                contact.group.uploadVoice(inputStream)
+            }
+            miraiVoice = v
+            v
+        }else error("mirai send voice only supposed group!")
+    }
+
 }
 
 class XmlImpl(override val serviceId: Int, override val value: String) : MessageItemBase(), XmlEx {

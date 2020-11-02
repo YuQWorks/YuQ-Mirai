@@ -15,9 +15,8 @@ import javax.inject.Inject
 class MiraiMessageItemFactory : MessageItemFactory {
 
     override fun text(text: String) = TextImpl(text)
-    override fun at(member: Member): At {
-        TODO("Not yet implemented")
-    }
+
+    override fun at(member: Member) = AtMemberImpl(member)
 
     override fun at(qq: Long) = AtImpl(qq)
 
@@ -44,9 +43,7 @@ class MiraiMessageItemFactory : MessageItemFactory {
 
     override fun imageToFlash(image: Image) = FlashImageImpl(image)
 
-    override fun voice(file: File): Voice {
-        TODO("Not yet implemented")
-    }
+    override fun voiceByInputStream(inputStream: InputStream) = VoiceSend(inputStream)
 
     override fun xmlEx(serviceId: Int, value: String): XmlEx = XmlImpl(serviceId, value)
 

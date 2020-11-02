@@ -9,7 +9,9 @@ import com.IceCreamQAQ.Yu.cache.EhcacheHelp
 import com.IceCreamQAQ.Yu.controller.router.NewRouter
 import com.IceCreamQAQ.Yu.di.YuContext
 import com.IceCreamQAQ.Yu.event.EventBus
+import com.IceCreamQAQ.Yu.toJSONString
 import com.IceCreamQAQ.Yu.util.Web
+import com.alibaba.fastjson.JSON
 import com.icecreamqaq.yuq.*
 import com.icecreamqaq.yuq.controller.ContextRouter
 import com.icecreamqaq.yuq.controller.ContextSession
@@ -27,6 +29,7 @@ import com.icecreamqaq.yuq.mirai.message.*
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.alsoLogin
+import net.mamoe.mirai.contact.Member as MiraiMember
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.event.events.GroupMemberEvent
 import net.mamoe.mirai.event.events.MessageRecallEvent
@@ -34,12 +37,13 @@ import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.message.FriendMessageEvent
 import net.mamoe.mirai.message.TempMessageEvent
 import net.mamoe.mirai.message.data.*
-import net.mamoe.mirai.qqandroid.FPMM
-import net.mamoe.mirai.qqandroid.network.WLoginSigInfo
 import net.mamoe.mirai.utils.BotConfiguration
 import org.slf4j.LoggerFactory
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.collections.set
 import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
 import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
@@ -119,8 +123,8 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
 //    var DefaultLogger: (identity: String?) -> MiraiLogger = { YuQMiraiLogger }
 
     override fun init() {
-        FPMM.getTime = { System.currentTimeMillis() }
-        FPMM.clear()
+//        FPMM.getTime = { System.currentTimeMillis() }
+//        FPMM.clear()
 
         mif = messageItemFactory
 //        mf = messageFactory
@@ -128,6 +132,7 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
         botId = qq.toLong()
         web = webImpl
         localEventBus = eventBus
+        com.icecreamqaq.yuq.eventBus = eventBus
 
 
         bot = Bot(botId, pwd) {
@@ -165,21 +170,22 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
                 for (cf in field.type.declaredFields) {
                     if (cf.name == "wLoginSigInfo") {
                         cf.isAccessible = true
-                        val lsi = cf[client] as WLoginSigInfo
-//                        val lsiJS = lsi.toJSONString()
-//                        val lsiJO = JSON.parseObject(lsiJS)
-                        val sKey = String(lsi.sKey.data)
+                        val lsi = cf[client]
+                        val lsiJS = lsi.toJSONString()
+                        val lsiJO = JSON.parseObject(lsiJS)
+                        val sKey = String(Base64.getDecoder().decode(lsiJO.getJSONObject("sKey").getString("data")))
 
                         this.sKey = sKey
                         this.cookieEx.skey = sKey
                         this.gtk = f(sKey)
                         this.cookieEx.gtk = this.gtk
-                        this.superKey = String(lsi.superKey)
+                        this.superKey = String(Base64.getDecoder().decode(lsiJO.getString("superKey")))
 
-                        val psKeys = lsi.psKeyMap
+                        val psKeys = lsiJO.getJSONObject("psKeyMap")
 
-                        for ((k, v) in psKeys) {
-                            val value = String(v.data)
+                        for (k in psKeys.keys) {
+                            val value = String(Base64.getDecoder().decode(psKeys.getJSONObject(k).getString("data"))
+                                    ?: continue)
                             val pskey = YuQ.QQCookie.Pskey(value, f(value))
                             pskeyMap[k] = pskey
                             webImpl.saveCookie(k, "/", "p_skey", value)
@@ -549,6 +555,22 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
             eventBus.post(GroupUnBanBotEvent(member.group, member, op))
         }
 
+        bot.subscribeAlways<MemberNudgedEvent> {
+            if (from.id == botId) return@subscribeAlways
+            val group = groups[from.group.id] ?: return@subscribeAlways
+            ClickSomeBodyEvent.Group(group[from.id], group[member.id], action, suffix)()
+        }
+        bot.subscribeAlways<BotNudgedEvent> {
+            if (from.id == botId) return@subscribeAlways
+            if (from is MiraiMember) {
+                val group = groups[(from as MiraiMember).group.id] ?: return@subscribeAlways
+                ClickBotEvent.Group(group[from.id], action, suffix)
+            } else {
+                ClickBotEvent.Private.FriendClick(friends[from.id] ?: return@subscribeAlways, action, suffix)
+            }()
+        }
+
+
 
         bot.subscribeAlways<MessageRecallEvent> {
             eventBus.post(when (this) {
@@ -599,12 +621,12 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
 
 }
 
-@JobCenter
-class MiraiJob {
-
-    @Cron("2m")
-    fun cf() {
-        FPMM.clear()
-    }
-
-}
+//@JobCenter
+//class MiraiJob {
+//
+//    @Cron("2m")
+//    fun cf() {
+//        FPMM.clear()
+//    }
+//
+//}

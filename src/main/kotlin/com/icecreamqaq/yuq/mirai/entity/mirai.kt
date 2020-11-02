@@ -10,6 +10,8 @@ import com.icecreamqaq.yuq.mirai.message.AtImpl
 import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
 import com.icecreamqaq.yuq.mirai.message.toLocal
 import kotlinx.coroutines.runBlocking
+import net.mamoe.mirai.message.action.Nudge
+import net.mamoe.mirai.message.action.Nudge.Companion.sendNudge
 import org.slf4j.LoggerFactory
 import net.mamoe.mirai.contact.Contact as MiraiContact
 import net.mamoe.mirai.contact.Friend as MiraiFriend
@@ -36,13 +38,19 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
     }
 }
 
-class FriendImpl(private val friend: MiraiFriend) : ContactImpl(friend), Friend {
+class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend {
 
     override val id = friend.id
     override val avatar
         get() = friend.avatarUrl
     override val name
         get() = friend.nick
+
+    override fun click() {
+        runBlocking {
+            friend.sendNudge(friend.nudge())
+        }
+    }
 
     override fun delete() {
         TODO("Not yet implemented")
@@ -52,7 +60,7 @@ class FriendImpl(private val friend: MiraiFriend) : ContactImpl(friend), Friend 
 
 }
 
-class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
+class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
     override var maxCount: Int = 0
     override val admins = arrayListOf<GroupMemberImpl>()
@@ -130,7 +138,7 @@ class GroupImpl(private val group: MiraiGroup) : ContactImpl(group), Group {
 
 }
 
-open class GroupMemberImpl(private val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member), Member {
+open class GroupMemberImpl(internal val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member), Member {
 
     override val permission
         get() = member.permission.level
@@ -153,6 +161,16 @@ open class GroupMemberImpl(private val member: MiraiMember, override val group: 
         runBlocking {
             member.mute(time)
         }
+    }
+
+    override fun click() {
+        runBlocking {
+            group.group.sendNudge(member.nudge())
+        }
+    }
+
+    override fun clickWithTemp() {
+        TODO("Not yet implemented")
     }
 
     override fun unBan() {
