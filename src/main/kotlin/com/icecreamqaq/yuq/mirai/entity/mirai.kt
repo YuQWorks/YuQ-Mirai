@@ -5,10 +5,14 @@ import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.error.SendMessageFailedByCancel
 import com.icecreamqaq.yuq.event.SendMessageEvent
 import com.icecreamqaq.yuq.message.Message
+import com.icecreamqaq.yuq.message.MessageSource
 import com.icecreamqaq.yuq.mirai.localEventBus
 import com.icecreamqaq.yuq.mirai.message.AtImpl
 import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
 import com.icecreamqaq.yuq.mirai.message.toLocal
+import com.icecreamqaq.yuq.mirai.send
+import com.icecreamqaq.yuq.util.WebHelper.Companion.postWithQQKey
+import com.icecreamqaq.yuq.web
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.action.Nudge
 import net.mamoe.mirai.message.action.Nudge.Companion.sendNudge
@@ -22,19 +26,26 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
 
     private val log = LoggerFactory.getLogger(ContactImpl::class.java)
 
-    override fun sendMessage(message: Message): MiraiMessageSource {
-        val ms = message.toLogString()
-        val ts = this.toLogString()
-        log.debug("Send Message To: $ts, $ms")
-        if (localEventBus.post(SendMessageEvent.Per(this, message))) throw SendMessageFailedByCancel()
-        val m = MiraiMessageSource(
-                runBlocking {
-                    miraiContact.sendMessage(message.toLocal(this@ContactImpl))
-                }.source
-        )
-        localEventBus.post(SendMessageEvent.Post(this, message, m))
-        log.info("$ts <- $ms")
-        return m
+    override fun sendMessage(message: Message): MessageSource {
+//        val ms = message.toLogString()
+//        val ts = this.toLogString()
+//        log.debug("Send Message To: $ts, $ms")
+//        if (localEventBus.post(SendMessageEvent.Per(this, message))) throw SendMessageFailedByCancel()
+//        val m = MiraiMessageSource(
+//                runBlocking {
+//                    miraiContact.sendMessage(message.toLocal(this@ContactImpl))
+//                }.source
+//        )
+//        localEventBus.post(SendMessageEvent.Post(this, message, m))
+//        log.info("$ts <- $ms")
+//        return m
+        return message.send(this, miraiContact, {
+            MiraiMessageSource(
+                    runBlocking {
+                        miraiContact.sendMessage(message.toLocal(this@ContactImpl))
+                    }.source
+            )
+        })
     }
 }
 
@@ -62,7 +73,7 @@ class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend
 
 class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
-    override var maxCount: Int = 0
+    override var maxCount: Int = -1
     override val admins = arrayListOf<GroupMemberImpl>()
 
     override val avatar: String
@@ -70,6 +81,8 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
     override val name: String = group.name
     override val owner: Member
+
+    override operator fun get(qq: Long)= super.get(qq) as GroupMemberImpl
 
     override val members: MutableMap<Long, GroupMemberImpl>
     override val bot: GroupMemberImpl
@@ -88,7 +101,7 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
     }
 
-    fun refreshAdmin(){
+    fun refreshAdmin() {
         admins.clear()
         for (member in group.members) {
             val m = GroupMemberImpl(member, this)
@@ -97,28 +110,27 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
         }
     }
 
-//    init {
+    init {
 //        maxCount = -1
-//
-////        maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
-////                mapOf(
-////                        "gc" to id.toString(),
-////                        "st" to 0.toString(),
-////                        "end" to 15.toString(),
-////                        "sort" to "0",
-////                        "bkn" to "{gtk}"
-////                ) as MutableMap<String, String>
-////        ).toJSONObject().getIntValue("max_count")
-//    }
+
+        try {
+            maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
+                    mapOf(
+                            "gc" to id.toString(),
+                            "st" to 0.toString(),
+                            "end" to 15.toString(),
+                            "sort" to "0",
+                            "bkn" to "{gtk}"
+                    ) as MutableMap<String, String>
+            ).toJSONObject().getIntValue("max_count")
+        } catch (e: Exception) {
+        }
+    }
 
     override fun leave() {
         runBlocking {
             group.quit()
         }
-    }
-
-    override fun get(qq: Long): GroupMemberImpl {
-        return members[qq] ?: if (qq == bot.id) bot else error("Member $qq Not Found!")
     }
 
     override fun isFriend() = false

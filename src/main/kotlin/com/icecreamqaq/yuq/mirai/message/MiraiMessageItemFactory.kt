@@ -35,11 +35,7 @@ class MiraiMessageItemFactory : MessageItemFactory {
 
     override fun imageByInputStream(inputStream: InputStream) = ImageSend(inputStream.toExternalImage())
 
-    override fun imageByUrl(url: String): Image {
-        val file = IO.tmpFile()
-        web.download(url, file)
-        return image(file)
-    }
+    override fun imageByUrl(url: String) = imageByInputStream(web.download(url))
 
     override fun imageToFlash(image: Image) = FlashImageImpl(image)
 

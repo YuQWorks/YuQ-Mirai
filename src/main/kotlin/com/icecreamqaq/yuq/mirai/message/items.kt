@@ -97,9 +97,11 @@ class VoiceRecv(
     override fun toLocal(contact: Contact) = miraiVoice
 }
 
-class VoiceSend(val inputStream: InputStream):MessageItemBase(),Voice{
+class VoiceSend(val inputStream: InputStream) : MessageItemBase(), Voice {
 
     lateinit var miraiVoice: MiraiVoice
+
+    override fun toPath() = if (::miraiVoice.isInitialized) miraiVoice.url ?: "" else "语音"
 
     override val id: String
         get() = miraiVoice.fileName
@@ -108,13 +110,13 @@ class VoiceSend(val inputStream: InputStream):MessageItemBase(),Voice{
 
     override fun toLocal(contact: Contact): Any {
         return if (::miraiVoice.isInitialized) miraiVoice
-        else if (contact is GroupImpl){
+        else if (contact is GroupImpl) {
             val v = runBlocking {
                 contact.group.uploadVoice(inputStream)
             }
             miraiVoice = v
             v
-        }else error("mirai send voice only supposed group!")
+        } else error("mirai send voice only supposed group!")
     }
 
 }

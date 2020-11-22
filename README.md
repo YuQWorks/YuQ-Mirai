@@ -1,4 +1,4 @@
-YuQ-Mirai 是一个以 [Mirai-Rain](https://github.com/YuQWorks/Mirai-Rain) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
+YuQ-Mirai 是一个以 [mirai](https://github.com/mamoe/mirai) 为基础，并实现了 [YuQ API](https://github.com/YuQWorks/YuQ) 的 QQ 机器人快速开发框架。
 
  - 路由映射
  - 依赖注入
