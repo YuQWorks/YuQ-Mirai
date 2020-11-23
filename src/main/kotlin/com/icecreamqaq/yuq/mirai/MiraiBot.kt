@@ -627,7 +627,7 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
     override fun isFriend() = false
     override fun runtimeName() = "YuQ-Mirai"
 
-    override fun runtimeVersion() = "0.1.0.0-DEV6"
+    override fun runtimeVersion() = "0.1.0.0-DEV7"
 
 }
 
