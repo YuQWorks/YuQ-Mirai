@@ -52,10 +52,6 @@ abstract class LogBase: MiraiLogger  {
 
 
     override fun <T : MiraiLogger> plus(follower: T): T = follower
-
-    override fun plusAssign(follower: MiraiLogger) {
-
-    }
 }
 
 class Network(override val identity: String?) : LogBase() {

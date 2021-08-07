@@ -1,6 +1,7 @@
 package com.icecreamqaq.yuq.mirai.entity
 
 import com.IceCreamQAQ.Yu.toJSONObject
+import com.icecreamqaq.yuq.YuQ
 import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.error.SendMessageFailedByCancel
 import com.icecreamqaq.yuq.event.SendMessageEvent
@@ -10,6 +11,7 @@ import com.icecreamqaq.yuq.mirai.localEventBus
 import com.icecreamqaq.yuq.mirai.message.AtImpl
 import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
 import com.icecreamqaq.yuq.mirai.message.toLocal
+import com.icecreamqaq.yuq.mirai.miraiBot
 import com.icecreamqaq.yuq.mirai.send
 import com.icecreamqaq.yuq.util.WebHelper.Companion.postWithQQKey
 import com.icecreamqaq.yuq.web
@@ -20,9 +22,12 @@ import org.slf4j.LoggerFactory
 import net.mamoe.mirai.contact.Contact as MiraiContact
 import net.mamoe.mirai.contact.Friend as MiraiFriend
 import net.mamoe.mirai.contact.Group as MiraiGroup
-import net.mamoe.mirai.contact.Member as MiraiMember
+import net.mamoe.mirai.contact.NormalMember as MiraiMember
 
 abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
+
+    override val yuq: YuQ
+        get() = miraiBot
 
     private val log = LoggerFactory.getLogger(ContactImpl::class.java)
 
@@ -41,9 +46,9 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
 //        return m
         return message.send(this, miraiContact, {
             MiraiMessageSource(
-                    runBlocking {
-                        miraiContact.sendMessage(message.toLocal(this@ContactImpl))
-                    }.source
+                runBlocking {
+                    miraiContact.sendMessage(message.toLocal(this@ContactImpl))
+                }.source
             )
         })
     }
@@ -80,9 +85,11 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
         get() = group.avatarUrl
 
     override val name: String = group.name
+    override val notices: GroupNoticeList
+        get() = TODO("Not yet implemented")
     override val owner: Member
 
-    override operator fun get(qq: Long)= super.get(qq) as GroupMemberImpl
+    override operator fun get(qq: Long) = super.get(qq) as GroupMemberImpl
 
     override val members: MutableMap<Long, GroupMemberImpl>
     override val bot: GroupMemberImpl
@@ -114,14 +121,15 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 //        maxCount = -1
 
         try {
-            maxCount = web.postWithQQKey("https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
-                    mapOf(
-                            "gc" to id.toString(),
-                            "st" to 0.toString(),
-                            "end" to 15.toString(),
-                            "sort" to "0",
-                            "bkn" to "{gtk}"
-                    ) as MutableMap<String, String>
+            maxCount = web.postWithQQKey(
+                "https://qun.qq.com/cgi-bin/qun_mgr/search_group_members",
+                mapOf(
+                    "gc" to id.toString(),
+                    "st" to 0.toString(),
+                    "end" to 15.toString(),
+                    "sort" to "0",
+                    "bkn" to "{gtk}"
+                ) as MutableMap<String, String>
             ).toJSONObject().getIntValue("max_count")
         } catch (e: Exception) {
         }
@@ -150,7 +158,8 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
 }
 
-open class GroupMemberImpl(internal val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member), Member {
+open class GroupMemberImpl(internal val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member),
+    Member {
 
     override val permission
         get() = member.permission.level
@@ -203,6 +212,8 @@ open class GroupMemberImpl(internal val member: MiraiMember, override val group:
 
     override val id
         get() = member.id
+    override val lastMessageTime: Long
+        get() = member.lastSpeakTimestamp.toLong() * 1000
     override val avatar
         get() = member.avatarUrl
     override val name

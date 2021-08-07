@@ -14,7 +14,9 @@ import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.data.*
-import net.mamoe.mirai.utils.ExternalImage
+import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import net.mamoe.mirai.utils.ExternalResource
+import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -34,10 +36,10 @@ class TextImpl(override var text: String) : MessageItemBase(), Text {
 class AtImpl(override var user: Long) : MessageItemBase(), At {
 
     override fun toLocal(contact: Contact) =
-            if (contact is GroupImpl)
-                if (user == -1L) AtAll
-                else MiraiAt(contact[user].miraiContact as MiraiMember)
-            else PlainText("@$user")
+        if (contact is GroupImpl)
+            if (user == -1L) AtAll
+            else MiraiAt(contact[user].miraiContact as MiraiMember)
+        else PlainText("@$user")
 
 }
 
@@ -51,7 +53,7 @@ class FaceImpl(override val faceId: Int) : MessageItemBase(), Face {
 
 }
 
-class ImageSend(val ei: ExternalImage) : MessageItemBase(), Image {
+class ImageSend(val ei: ExternalResource) : MessageItemBase(), Image {
 
     override lateinit var id: String
     override lateinit var url: String
@@ -71,9 +73,10 @@ open class ImageReceive(override val id: String, override val url: String) : Mes
 
     override fun toLocal(contact: Contact): Any {
         val image = MiraiImage(id)
-        val cType = contact is GroupImpl
-        val iType = image is GroupImage
-        return if (cType == iType) image else runBlocking { mif.imageByUrl(image.queryUrl()).toLocal(contact) }
+        return image
+//        val cType = contact is GroupImpl
+//        val iType = image is GroupImage
+//        return if (cType == iType) image else runBlocking { mif.imageByUrl(image.queryUrl()).toLocal(contact) }
     }
 
 }
@@ -88,7 +91,7 @@ class FlashImageImpl(override val image: Image) : MessageItemBase(), FlashImage 
 }
 
 class VoiceRecv(
-        val miraiVoice: MiraiVoice
+    val miraiVoice: MiraiVoice
 ) : MessageItemBase(), Voice {
 
     override val id: String = miraiVoice.fileName
@@ -110,20 +113,18 @@ class VoiceSend(val inputStream: InputStream) : MessageItemBase(), Voice {
 
     override fun toLocal(contact: Contact): Any {
         return if (::miraiVoice.isInitialized) miraiVoice
-        else if (contact is GroupImpl) {
-            val v = runBlocking {
-                contact.group.uploadVoice(inputStream)
-            }
-            miraiVoice = v
-            v
-        } else error("mirai send voice only supposed group!")
+        else if (contact is GroupImpl)
+            runBlocking {
+                contact.group.uploadVoice(inputStream.toExternalResource())
+            }.apply { miraiVoice = this }
+        else error("mirai send voice only supposed group!")
     }
 
 }
 
 class XmlImpl(override val serviceId: Int, override val value: String) : MessageItemBase(), XmlEx {
 
-    override fun toLocal(contact: Contact) = ServiceMessage(serviceId, value)
+    override fun toLocal(contact: Contact) = SimpleServiceMessage(serviceId, value)
 
 }
 

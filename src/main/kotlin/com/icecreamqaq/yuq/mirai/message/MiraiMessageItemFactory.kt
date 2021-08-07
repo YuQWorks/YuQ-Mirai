@@ -6,7 +6,7 @@ import com.IceCreamQAQ.Yu.util.Web
 import com.icecreamqaq.yuq.entity.Member
 import com.icecreamqaq.yuq.message.*
 import com.icecreamqaq.yuq.web
-import net.mamoe.mirai.utils.toExternalImage
+import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.InputStream
@@ -27,13 +27,13 @@ class MiraiMessageItemFactory : MessageItemFactory {
 
     override fun image(url: String) = imageByUrl(url)
 
-    override fun imageByBufferedImage(bufferedImage: BufferedImage) = ImageSend(bufferedImage.toExternalImage())
+    override fun imageByBufferedImage(bufferedImage: BufferedImage) = TODO()//ImageSend(bufferedImage.data.)
 
-    override fun imageByFile(file: File) = ImageSend(file.toExternalImage())
+    override fun imageByFile(file: File) = ImageSend(file.toExternalResource())
 
     override fun imageById(id: String) = ImageReceive(id, "")
 
-    override fun imageByInputStream(inputStream: InputStream) = ImageSend(inputStream.toExternalImage())
+    override fun imageByInputStream(inputStream: InputStream) = ImageSend(inputStream.toExternalResource().apply { inputStream.close() })
 
     override fun imageByUrl(url: String) = imageByInputStream(web.download(url))
 

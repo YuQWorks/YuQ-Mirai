@@ -6,7 +6,9 @@ import com.icecreamqaq.yuq.message.MessageSource
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.PermissionDeniedException
 import net.mamoe.mirai.message.data.MessageChain
+import net.mamoe.mirai.message.data.MessageSource.Key.recall
 import net.mamoe.mirai.message.data.QuoteReply
+import net.mamoe.mirai.message.data.bot
 import net.mamoe.mirai.message.data.buildMessageChain
 
 fun Message.toLocal(contact: Contact): MessageChain {
@@ -27,7 +29,7 @@ fun Message.toLocal(contact: Contact): MessageChain {
 
 class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource) : MessageSource {
     override val id: Int
-        get() = source.id
+        get() = source.ids[0]
     override val liteMsg: String = source.contentToString()
     override val sendTime: Long
         get() = TODO("Not yet implemented")
@@ -37,7 +39,7 @@ class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource)
     override fun recall(): Int {
         return runBlocking {
             return@runBlocking try {
-                source.bot.recall(source)
+                source.recall()
                 0
             } catch (e: PermissionDeniedException) {
                 -1
