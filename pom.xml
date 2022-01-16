@@ -6,7 +6,7 @@
 
     <groupId>com.IceCreamQAQ.YuQ</groupId>
     <artifactId>YuQ-Mirai</artifactId>
-    <version>0.1.0.0-DEV15</version>
+    <version>0.1.0.0-DEV22</version>
 
     <name>YuQ-Mirai</name>
     <description>YuQ-Mirai is a simple qq robot Framework.</description>
@@ -25,17 +25,25 @@
         </developer>
     </developers>
 
-    <parent>
-        <groupId>com.IceCreamQAQ</groupId>
-        <artifactId>IceCream-parent</artifactId>
-        <version>1.0.0.3</version>
-    </parent>
+    <distributionManagement>
+        <repository>
+            <id>IceCream-releases</id>
+            <name>internal releases</name>
+            <url>https://maven.IceCreamQAQ.com/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>IceCream-snapshots</id>
+            <name>internal snapshot</name>
+            <url>https://maven.IceCreamQAQ.com/repository/maven-snapshots/</url>
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <kotlin.version>1.5.10</kotlin.version>
 
-        <mirai.version>2.7-M2</mirai.version>
-        <YuQ.version>0.1.0.0-DEV18</YuQ.version>
+        <mirai.version>2.9.0</mirai.version>
+        <YuQ.version>0.1.0.0-DEV23</YuQ.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>
@@ -54,27 +62,10 @@
             <version>${YuQ.version}</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>com.IceCreamQAQ</groupId>-->
-<!--            <artifactId>Yu-Core</artifactId>-->
-<!--            <version>0.1.4.3</version>-->
-<!--        </dependency>-->
-
         <dependency>
             <groupId>net.mamoe</groupId>
             <artifactId>mirai-core-jvm</artifactId>
             <version>${mirai.version}</version>
-
-<!--            <exclusions>-->
-<!--                <exclusion>-->
-<!--                    <groupId>org.jetbrains.kotlinx</groupId>-->
-<!--                    <artifactId>kotlinx-serialization-core</artifactId>-->
-<!--                </exclusion>-->
-<!--                <exclusion>-->
-<!--                    <groupId>org.jetbrains.kotlinx</groupId>-->
-<!--                    <artifactId>kotlinx-serialization-json</artifactId>-->
-<!--                </exclusion>-->
-<!--            </exclusions>-->
         </dependency>
 
         <dependency>
@@ -87,24 +78,6 @@
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
             <version>1.5.0</version>
-        </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>org.jetbrains.kotlinx</groupId>-->
-<!--            <artifactId>kotlinx-serialization-core-jvm</artifactId>-->
-<!--            <version>1.0.1</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>org.jetbrains.kotlinx</groupId>-->
-<!--            <artifactId>kotlinx-serialization-json-jvm</artifactId>-->
-<!--            <version>1.0.1</version>-->
-<!--        </dependency>-->
-
-        <dependency>
-            <groupId>no.tornado</groupId>
-            <artifactId>tornadofx</artifactId>
-            <version>1.7.20</version>
         </dependency>
 
 
@@ -166,8 +139,8 @@
 <!--            <url>https://repo1.maven.org/maven2/</url>-->
 <!--        </repository>-->
         <repository>
-            <id>jcenter</id>
-            <url>https://jcenter.bintray.com/</url>
+            <id>IceCream</id>
+            <url>https://maven.icecreamqaq.com/repository/maven-public/</url>
         </repository>
     </repositories>
 </project>

@@ -8,17 +8,13 @@ import com.icecreamqaq.yuq.message.Face
 import com.icecreamqaq.yuq.message.FlashImage
 import com.icecreamqaq.yuq.message.Image
 import com.icecreamqaq.yuq.message.Voice
-import com.icecreamqaq.yuq.mif
 import com.icecreamqaq.yuq.mirai.entity.ContactImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.data.*
-import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import net.mamoe.mirai.utils.ExternalResource
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
-import java.io.File
-import java.io.FileInputStream
 import java.io.InputStream
 import net.mamoe.mirai.contact.Member as MiraiMember
 import net.mamoe.mirai.message.data.At as MiraiAt
@@ -53,14 +49,18 @@ class FaceImpl(override val faceId: Int) : MessageItemBase(), Face {
 
 }
 
-class ImageSend(val ei: ExternalResource) : MessageItemBase(), Image {
+class ImageSend(private val ei: ExternalResource) : MessageItemBase(), Image {
 
     override lateinit var id: String
     override lateinit var url: String
 
+    lateinit var image: MiraiImage
+
     override fun toLocal(contact: Contact): Any {
         contact as ContactImpl
-        val image = runBlocking { contact.miraiContact.uploadImage(ei) }
+        if (::image.isInitialized) return image
+        image = runBlocking { contact.miraiContact.uploadImage(ei) }
+        ei.close()
         id = image.imageId
         return image
     }
@@ -69,17 +69,30 @@ class ImageSend(val ei: ExternalResource) : MessageItemBase(), Image {
 
 }
 
-open class ImageReceive(override val id: String, override val url: String) : MessageItemBase(), Image {
+open class ImageReceive(id: String, override val url: String) : MessageItemBase(), Image {
+
+    override val id: String = if (id.startsWith("{")) id.replace("{", "").replace("}", "").replace("-", "") else id
 
     override fun toLocal(contact: Contact): Any {
-        val image = MiraiImage(id)
-        return image
+        return MiraiImage(id.split(".").let { "{${it[0].toUUID()}}.${it[1]}" })
 //        val cType = contact is GroupImpl
 //        val iType = image is GroupImage
 //        return if (cType == iType) image else runBlocking { mif.imageByUrl(image.queryUrl()).toLocal(contact) }
     }
 
+    private fun String.toUUID(): String = "${this[0..7]}-${this[8..11]}-${this[12..15]}-${this[16..19]}-${this[20..31]}"
+
+    private operator fun String.get(intRange: IntRange): String {
+        val sb = StringBuilder()
+
+        for (i in intRange) {
+            sb.append(this[i])
+        }
+        return sb.toString()
+    }
+
 }
+
 
 class FlashImageImpl(override val image: Image) : MessageItemBase(), FlashImage {
 

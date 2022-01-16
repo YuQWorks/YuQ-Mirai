@@ -5,20 +5,22 @@ import com.icecreamqaq.yuq.YuQ
 import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.error.SendMessageFailedByCancel
 import com.icecreamqaq.yuq.event.SendMessageEvent
+import com.icecreamqaq.yuq.message.Image
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageSource
 import com.icecreamqaq.yuq.mirai.localEventBus
-import com.icecreamqaq.yuq.mirai.message.AtImpl
-import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
-import com.icecreamqaq.yuq.mirai.message.toLocal
+import com.icecreamqaq.yuq.mirai.message.*
 import com.icecreamqaq.yuq.mirai.miraiBot
 import com.icecreamqaq.yuq.mirai.send
 import com.icecreamqaq.yuq.util.WebHelper.Companion.postWithQQKey
 import com.icecreamqaq.yuq.web
 import kotlinx.coroutines.runBlocking
+import net.mamoe.mirai.contact.Contact.Companion.uploadImage
 import net.mamoe.mirai.message.action.Nudge
 import net.mamoe.mirai.message.action.Nudge.Companion.sendNudge
+import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import org.slf4j.LoggerFactory
+import java.io.File
 import net.mamoe.mirai.contact.Contact as MiraiContact
 import net.mamoe.mirai.contact.Friend as MiraiFriend
 import net.mamoe.mirai.contact.Group as MiraiGroup
@@ -52,11 +54,20 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
             )
         })
     }
+
+    override fun sendFile(file: File) {
+        TODO("Not yet implemented")
+    }
+
+    override fun uploadImage(imageFile: File): Image =
+        runBlocking { miraiContact.uploadImage(imageFile).let { ImageReceive(it.imageId, it.queryUrl()) } }
 }
 
 class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend {
 
     override val id = friend.id
+    override val guid = id.toString()
+
     override val avatar
         get() = friend.avatarUrl
     override val name
@@ -78,6 +89,8 @@ class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend
 
 class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
+    override val guid = "g$id"
+
     override var maxCount: Int = -1
     override val admins = arrayListOf<GroupMemberImpl>()
 
@@ -158,8 +171,9 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
 }
 
-open class GroupMemberImpl(internal val member: MiraiMember, override val group: GroupImpl) : ContactImpl(member),
+open class GroupMemberImpl(internal val member: MiraiMember, final override val group: GroupImpl) : ContactImpl(member),
     Member {
+    override val guid = "${id}_${group.id}"
 
     override val permission
         get() = member.permission.level
@@ -168,8 +182,11 @@ open class GroupMemberImpl(internal val member: MiraiMember, override val group:
         set(value) {
             member.nameCard = value
         }
-    override val title
+    override var title
         get() = member.specialTitle
+        set(value) {
+            member.specialTitle = value
+        }
 
     override fun at() = AtImpl(id)
 
@@ -210,7 +227,7 @@ open class GroupMemberImpl(internal val member: MiraiMember, override val group:
         return "Member($nameCard($id)[${group.name}(${group.id}])"
     }
 
-    override val id
+    final override val id
         get() = member.id
     override val lastMessageTime: Long
         get() = member.lastSpeakTimestamp.toLong() * 1000
@@ -223,6 +240,8 @@ open class GroupMemberImpl(internal val member: MiraiMember, override val group:
 }
 
 class AnonymousMemberImpl(member: MiraiMember, group: GroupImpl) : GroupMemberImpl(member, group), AnonymousMember {
+
+    override val guid = "${id}_${group.id}"
 
     override fun canSendMessage() = false
     override fun isFriend() = false

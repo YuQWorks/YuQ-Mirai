@@ -23,9 +23,6 @@ import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import com.icecreamqaq.yuq.mirai.logger.Network
 import com.icecreamqaq.yuq.mirai.message.*
-import com.icecreamqaq.yuqui.MyApp
-import com.icecreamqaq.yuqui.WebView
-import com.sun.javafx.application.PlatformImpl
 import kotlinx.coroutines.*
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
@@ -41,21 +38,16 @@ import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.LoginSolver
+import net.mamoe.mirai.utils.StandardCharImageLoginSolver
+import net.mamoe.mirai.utils.info
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.slf4j.LoggerFactory
-import tornadofx.FX
-import tornadofx.find
-import tornadofx.launch
-import java.awt.BorderLayout
-import java.awt.Desktop
-import java.awt.Dimension
-import java.awt.event.*
-import java.awt.image.BufferedImage
-import java.net.URI
+import java.io.File
 import java.util.*
-import javax.imageio.ImageIO
 import javax.inject.Inject
 import javax.inject.Named
-import javax.swing.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.set
@@ -66,7 +58,7 @@ import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendReque
 import net.mamoe.mirai.event.events.GroupMessageEvent as MiraiGroupMessageEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 
-open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
+open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
     private val log = LoggerFactory.getLogger(MiraiBot::class.java)
 
@@ -105,7 +97,7 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
 //    override val web: Web
 
     @Inject
-    lateinit var rainBot: RainBot
+    lateinit var rainBot: YuQInternalBotImpl
 
     @Inject
     @field:Named("ContextSession")
@@ -148,18 +140,9 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
         com.icecreamqaq.yuq.web = web
         localEventBus = eventBus
         com.icecreamqaq.yuq.eventBus = eventBus
-        com.icecreamqaq.yuq.mirai.miraiBot = this
+        miraiBot = this
 
-
-        bot = BotFactory.newBot(botId, pwd) {
-            fileBasedDeviceInfo()
-            networkLoggerSupplier = { Network("Net ${it.id}") }
-            botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
-            if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
-            if (this@MiraiBot.protocol == "Watch") protocol = BotConfiguration.MiraiProtocol.ANDROID_WATCH
-            if (this@MiraiBot.protocol == "HD") protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
-            if ("-1" != System.getProperty("YuQ.Mirai.LoginUI")) loginSolver = MiraiUILoginSolver
-        }
+        bot = makeBot(botId, pwd)
         runBlocking {
             bot.alsoLogin()
         }
@@ -169,6 +152,18 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
 
         refreshFriends()
         refreshGroups()
+    }
+
+    fun makeBot(botId: Long, pwd: String): Bot = BotFactory.newBot(botId, pwd) {
+        if (File("device_$qq.json").exists()) fileBasedDeviceInfo("device_$qq.json")
+        else if (File("device.json").exists()) fileBasedDeviceInfo()
+        else fileBasedDeviceInfo("device_$qq.json")
+        loginSolver = StandardCharImageLoginSolver()
+        networkLoggerSupplier = { Network("Net ${it.id}") }
+        botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
+        if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+        if (this@MiraiBot.protocol == "Watch") protocol = BotConfiguration.MiraiProtocol.ANDROID_WATCH
+        if (this@MiraiBot.protocol == "HD") protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
     }
 
     open fun registerCookie() {
@@ -294,7 +289,7 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
                 is MiraiSource -> continue@loop
                 is QuoteReply -> message.reply = MiraiMessageSource(m.source)
                 is PlainText -> {
-                    messageBody.add(TextImpl(m.content))
+                    messageBody.append(TextImpl(m.content))
                     val sm = m.content.trim()
                     if (sm.isEmpty()) continue@loop
                     val sms = sm.replace("\n", " ").split(" ")
@@ -307,56 +302,56 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
                 }
                 is At -> {
                     val item = AtImpl(m.target)
-                    messageBody.add(item)
+                    messageBody.append(item)
                     if (itemNum == 0 && m.target == botId) continue@loop
                     pathBody.add(item)
                     itemNum++
                 }
                 is AtAll -> {
                     val item = (AtImpl(-1L))
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is Face -> {
                     val item = (FaceImpl(m.id))
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is Image -> {
                     val item = (ImageReceive(m.imageId, m.queryUrl()))
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is FlashImage -> {
                     val item = (FlashImageImpl(ImageReceive(m.image.imageId, m.image.queryUrl())))
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is Voice -> {
                     val item = VoiceRecv(m)
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is LightApp -> {
                     val item = JsonImpl(m.content)
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 is ServiceMessage -> {
                     val item = XmlImpl(m.serviceId, m.content)
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
                 else -> {
                     val item = NoImplItemImpl(m)
-                    messageBody.add(item)
+                    messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
@@ -668,165 +663,6 @@ open class MiraiBot : YuQ, ApplicationService, User, RainVersion {
     override fun isFriend() = false
     override fun runtimeName() = "YuQ-Mirai"
 
-    override fun runtimeVersion() = "0.1.0.0-DEV14"
+    override fun runtimeVersion() = "0.1.0.0-DEV21"
 
 }
-
-object MiraiUILoginSolver : LoginSolver() {
-
-    override val isSliderCaptchaSupported = true
-
-    private var kukuCap = false
-    private var inifFx = false
-
-    override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
-        return openWindow("Mirai PicCaptcha(${bot.id})") {
-            val image = ImageIO.read(data.inputStream())
-            JLabel(ImageIcon(image)).append()
-        }
-    }
-
-    override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
-
-        val ticket = if (!kukuCap) {
-            if (!inifFx) {
-                if ("-1" != System.getProperty("YuQ.Mirai.LoginUI")) GlobalScope.launch { launch<MyApp>() }
-                else error("当前环境不存在 JavaFx 或是不允许 UI 界面！")
-                delay(2000)
-            }
-            val def = CompletableDeferred<String>()
-            PlatformImpl.runLater {
-                find<WebView>(FX.defaultScope, mapOf("url" to url, "def" to def)).openWindow()
-            }
-            def.await()
-        } else (web.post("https://api.kuku.me/tool/captcha", mapOf("url" to url)).toJSONObject().getJSONObject("data")
-            ?.getString("ticket") ?: "").apply { println("Kuku Cap Result: $this") }
-        kukuCap = true
-        return ticket
-    }
-
-    override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
-        val title = "Mirai UnsafeDeviceLoginVerify(${bot.id})"
-        return openWindow(title) {
-            JLabel(
-                """
-                <html>
-                需要进行账户安全认证<br>
-                该账户有[设备锁]/[不常用登录地点]/[不常用设备登录]的问题<br>
-                完成以下账号认证即可成功登录|理论本认证在mirai每个账户中最多出现1次<br>
-                成功后请关闭该窗口
-            """.trimIndent()
-            ).append()
-            HyperLinkLabel(url, "设备锁验证", title).last()
-        }
-    }
-
-    suspend fun openWindow(title: String = "", initializer: WindowInitializer.(JFrame) -> Unit = {}): String {
-        return openWindow(title, WindowInitializer(initializer))
-    }
-
-    suspend fun openWindow(title: String = "", initializer: WindowInitializer = WindowInitializer {}): String {
-        val frame = JFrame()
-//        frame.iconImage = windowImage
-        frame.minimumSize = Dimension(228, 62) // From Windows 10
-        val value = JTextField()
-        val def = CompletableDeferred<String>()
-        value.addKeyListener(object : KeyListener {
-            override fun keyTyped(e: KeyEvent?) {
-            }
-
-            override fun keyPressed(e: KeyEvent?) {
-                when (e!!.keyCode) {
-                    27, 10 -> {
-                        def.complete(value.text)
-                    }
-                }
-            }
-
-            override fun keyReleased(e: KeyEvent?) {
-            }
-        })
-        frame.layout = BorderLayout(10, 5)
-        frame.add(value, BorderLayout.SOUTH)
-        initializer.init(frame)
-
-        frame.pack()
-        frame.defaultCloseOperation = JFrame.DISPOSE_ON_CLOSE
-        frame.addWindowListener(object : WindowAdapter() {
-            override fun windowClosing(e: WindowEvent?) {
-                def.complete(value.text)
-            }
-        })
-        frame.setLocationRelativeTo(null)
-        frame.title = title
-        frame.isVisible = true
-
-        return def.await().trim().also {
-            SwingUtilities.invokeLater {
-                frame.dispose()
-            }
-        }
-    }
-
-}
-
-class WindowInitializer(private val initializer: WindowInitializer.(JFrame) -> Unit) {
-    private lateinit var frame0: JFrame
-    val frame: JFrame get() = frame0
-    fun java.awt.Component.append() {
-        frame.add(this, BorderLayout.NORTH)
-    }
-
-    fun java.awt.Component.last() {
-        frame.add(this)
-    }
-
-    internal fun init(frame: JFrame) {
-        this.frame0 = frame
-        initializer(frame)
-    }
-}
-
-class HyperLinkLabel constructor(
-    url: String,
-    text: String,
-    fallbackTitle: String
-) : JLabel() {
-    init {
-        super.setText("<html><a href='$url'>$text</a></html>")
-        addMouseListener(object : MouseAdapter() {
-
-            override fun mouseClicked(e: MouseEvent) {
-                // Try to open browser safely. #694
-                try {
-                    Desktop.getDesktop().browse(URI(url))
-                } catch (ex: Exception) {
-                    JOptionPane.showInputDialog(
-                        this@HyperLinkLabel,
-                        "Mirai 无法直接打开浏览器, 请手动复制以下 URL 打开",
-                        fallbackTitle,
-                        JOptionPane.WARNING_MESSAGE,
-                        null,
-                        null,
-                        url
-                    )
-                }
-            }
-        })
-    }
-}
-
-//internal val windowImage: BufferedImage? by lazy {
-//    WindowHelperJvm::class.java.getResourceAsStream("project-mirai.png")?.use {
-//        ImageIO.read(it)
-//    }
-//}
-//@JobCenter
-//class MiraiJob {
-//
-//    @Cron("2m")
-//    fun cf() {
-//        FPMM.clear()
-//    }
-//
-//}

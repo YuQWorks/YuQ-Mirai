@@ -14,7 +14,6 @@ class YuQMiraiModule : Module {
     private lateinit var context: YuContext
 
     override fun onLoad() {
-        AppClassloader.registerBackList(arrayListOf("net.mamoe.", "javafx."))
         context.putBean(YuQInternalFun::class.java, "", YuQInternalFunMiraiImpl())
     }
 }
