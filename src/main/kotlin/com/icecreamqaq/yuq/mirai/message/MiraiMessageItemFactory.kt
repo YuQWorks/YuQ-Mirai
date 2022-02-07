@@ -44,4 +44,7 @@ class MiraiMessageItemFactory : MessageItemFactory {
     override fun xmlEx(serviceId: Int, value: String): XmlEx = XmlImpl(serviceId, value)
 
     override fun jsonEx(value: String) = JsonImpl(value)
+    override fun messagePackage(flag: Int, body: MutableList<IMessageItemChain>): MessagePackage {
+        TODO("Not yet implemented")
+    }
 }

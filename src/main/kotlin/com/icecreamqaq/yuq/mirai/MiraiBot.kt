@@ -88,6 +88,9 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
     @Inject
     override lateinit var web: Web
+    override fun id2platformId(id: Long) = id.toString()
+
+    override fun platformId2id(platformId: String) = platformId.toLong()
 
     @Inject
     lateinit var eventBus: EventBus
@@ -117,8 +120,8 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         override var pskeyMap: Map<String, YuQ.QQCookie.Pskey>
     ) : YuQ.QQCookie
 
-    override lateinit var friends: HashMap<Long, FriendImpl>
-    override lateinit var groups: HashMap<Long, GroupImpl>
+    override lateinit var friends: UserListImpl<FriendImpl>
+    override lateinit var groups: UserListImpl<GroupImpl>
 
     lateinit var sKey: String
     lateinit var superKey: String
@@ -218,8 +221,8 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         }
     }
 
-    override fun refreshFriends(): Map<Long, Friend> {
-        val friends = HashMap<Long, FriendImpl>(bot.friends.size)
+    override fun refreshFriends(): FriendList {
+        val friends = UserListImpl<FriendImpl>()
         for (friend in bot.friends) {
             friends[friend.id] = FriendImpl(friend)
         }
@@ -248,8 +251,8 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         }()
     }
 
-    override fun refreshGroups(): Map<Long, Group> {
-        val groups = HashMap<Long, GroupImpl>(bot.groups.size)
+    override fun refreshGroups(): GroupList {
+        val groups = UserListImpl<GroupImpl>()
         for (group in bot.groups) {
             try {
                 groups[group.id] = GroupImpl(group)
@@ -657,12 +660,14 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         get() = botId
     override val name: String
         get() = bot.nick
+    override val platformId: String
+        get() = botId.toString()
 
     override fun canSendMessage() = false
 
     override fun isFriend() = false
     override fun runtimeName() = "YuQ-Mirai"
 
-    override fun runtimeVersion() = "0.1.0.0-DEV21"
+    override fun runtimeVersion() = "0.1.0.0-DEV23"
 
 }

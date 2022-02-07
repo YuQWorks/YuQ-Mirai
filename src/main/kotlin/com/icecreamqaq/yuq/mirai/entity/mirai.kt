@@ -66,6 +66,7 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
 class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend {
 
     override val id = friend.id
+    override val platformId = id.toString()
     override val guid = id.toString()
 
     override val avatar
@@ -89,6 +90,7 @@ class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend
 
 class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
     override val id = group.id
+    override val platformId = id.toString()
     override val guid = "g$id"
 
     override var maxCount: Int = -1
@@ -104,11 +106,11 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
     override operator fun get(qq: Long) = super.get(qq) as GroupMemberImpl
 
-    override val members: MutableMap<Long, GroupMemberImpl>
+    override val members: UserListImpl<GroupMemberImpl>
     override val bot: GroupMemberImpl
 
     init {
-        members = HashMap(group.members.size)
+        members = UserListImpl()
         var owner: GroupMemberImpl? = null
         for (member in group.members) {
             val m = GroupMemberImpl(member, this)
@@ -171,9 +173,13 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 
 }
 
-open class GroupMemberImpl(internal val member: MiraiMember, final override val group: GroupImpl) : ContactImpl(member),
+open class GroupMemberImpl(
+    internal val member: MiraiMember,
+    final override val group: GroupImpl
+) : ContactImpl(member),
     Member {
-    override val guid = "${id}_${group.id}"
+    override val platformId = id.toString()
+    override val guid = "${group.id}_$id"
 
     override val permission
         get() = member.permission.level
