@@ -46,13 +46,13 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
 //        localEventBus.post(SendMessageEvent.Post(this, message, m))
 //        log.info("$ts <- $ms")
 //        return m
-        return message.send(this, miraiContact, {
+        return message.send(this, miraiContact) {
             MiraiMessageSource(
                 runBlocking {
                     miraiContact.sendMessage(message.toLocal(this@ContactImpl))
                 }.source
             )
-        })
+        }
     }
 
     override fun sendFile(file: File) {
