@@ -42,8 +42,8 @@
     <properties>
         <kotlin.version>1.6.10</kotlin.version>
 
-        <mirai.version>2.9.2</mirai.version>
-        <YuQ.version>0.1.0.0-DEV25</YuQ.version>
+        <mirai.version>2.11.1</mirai.version>
+        <YuQ.version>0.1.0.0-DEV32</YuQ.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>

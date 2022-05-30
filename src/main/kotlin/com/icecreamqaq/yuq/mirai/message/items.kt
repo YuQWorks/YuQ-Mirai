@@ -20,7 +20,7 @@ import net.mamoe.mirai.contact.Member as MiraiMember
 import net.mamoe.mirai.message.data.At as MiraiAt
 import net.mamoe.mirai.message.data.Face as MiraiFace
 import net.mamoe.mirai.message.data.Image as MiraiImage
-import net.mamoe.mirai.message.data.Voice as MiraiVoice
+import net.mamoe.mirai.message.data.Audio as MiraiVoice
 
 
 class TextImpl(override var text: String) : MessageItemBase(), Text {
@@ -104,11 +104,11 @@ class FlashImageImpl(override val image: Image) : MessageItemBase(), FlashImage 
 }
 
 class VoiceRecv(
-    val miraiVoice: MiraiVoice
+    val miraiVoice: OnlineAudio
 ) : MessageItemBase(), Voice {
 
-    override val id: String = miraiVoice.fileName
-    override val url: String = miraiVoice.url ?: ""
+    override val id: String = miraiVoice.filename
+    override val url: String = miraiVoice.urlForDownload ?: ""
 
     override fun toLocal(contact: Contact) = miraiVoice
 }
@@ -117,18 +117,18 @@ class VoiceSend(val inputStream: InputStream) : MessageItemBase(), Voice {
 
     lateinit var miraiVoice: MiraiVoice
 
-    override fun toPath() = if (::miraiVoice.isInitialized) miraiVoice.url ?: "" else "语音"
+    override fun toPath() = if (::miraiVoice.isInitialized) miraiVoice.filename ?: "" else "语音"
 
     override val id: String
-        get() = miraiVoice.fileName
+        get() = miraiVoice.filename
     override val url: String
-        get() = miraiVoice.url ?: ""
+        get() = ""
 
     override fun toLocal(contact: Contact): Any {
         return if (::miraiVoice.isInitialized) miraiVoice
         else if (contact is GroupImpl)
             runBlocking {
-                contact.group.uploadVoice(inputStream.toExternalResource())
+                contact.group.uploadAudio(inputStream.toExternalResource())
             }.apply { miraiVoice = this }
         else error("mirai send voice only supposed group!")
     }

@@ -30,21 +30,8 @@ class YuQMiraiStart {
 
         @JvmStatic
         fun start() {
-            AppClassloader.registerBackList(arrayListOf("net.mamoe.", "javafx."))
-            YuHook.put(
-                HookItem(
-                    "net.mamoe.mirai.FindMiraiInstanceKt",
-                    "findMiraiInstance",
-                    "com.icecreamqaq.yuq.mirai.HookMiraiService"
-                )
-            )
-            YuHook.put(
-                HookItem(
-                    "net.mamoe.mirai.utils.StandardCharImageLoginSolver",
-                    "onSolveSliderCaptcha",
-                    "com.icecreamqaq.yuq.mirai.HookSliderCaptcha"
-                )
-            )
+//            AppClassloader.registerBackList(arrayListOf("net.mamoe.", "javafx."))
+
 
             val startTime = System.currentTimeMillis()
             val classloader = AppClassloader(YuQStarter::class.java.classLoader)
@@ -84,7 +71,7 @@ class HookMiraiService : HookRunnable {
     }
 
     override fun preRun(method: HookMethod): Boolean {
-        method.result = Class.forName("net.mamoe.mirai.internal.MiraiImpl").kotlin.companionObjectInstance
+        method.result = Class.forName("net.mamoe.mirai.internal.MiraiImpl").run { kotlin.companionObjectInstance as? IMirai ?: newInstance() }
         return true
     }
 
@@ -160,7 +147,7 @@ class HookSliderCaptcha : HookRunnable {
         return true
     }
 
-    override fun postRun(method: HookMethod?) {
+    override fun postRun(method: HookMethod) {
 
     }
 

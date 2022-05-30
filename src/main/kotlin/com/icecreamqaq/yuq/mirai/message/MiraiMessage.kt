@@ -33,6 +33,8 @@ class MiraiMessageSource(val source: net.mamoe.mirai.message.data.MessageSource)
     override val liteMsg: String = source.contentToString()
     override val sendTime: Long
         get() = TODO("Not yet implemented")
+    override val sendTo: Long
+        get() = TODO("Not yet implemented")
     override val sender: Long
         get() = TODO("Not yet implemented")
 

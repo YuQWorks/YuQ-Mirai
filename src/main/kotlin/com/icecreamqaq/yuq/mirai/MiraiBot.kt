@@ -122,6 +122,8 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
     override lateinit var friends: UserListImpl<FriendImpl>
     override lateinit var groups: UserListImpl<GroupImpl>
+    override val guilds: GuildList
+        get() = TODO("Not yet implemented")
 
     lateinit var sKey: String
     lateinit var superKey: String
@@ -265,6 +267,10 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         return groups
     }
 
+    override fun refreshGuilds(): GuildList {
+        TODO("Not yet implemented")
+    }
+
     override fun start() {
         context.injectBean(rainBot)
         startBot()
@@ -334,7 +340,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                     pathBody.add(item)
                     itemNum++
                 }
-                is Voice -> {
+                is OnlineAudio -> {
                     val item = VoiceRecv(m)
                     messageBody.append(item)
                     pathBody.add(item)
