@@ -47,11 +47,15 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
 //        log.info("$ts <- $ms")
 //        return m
         return message.send(this, miraiContact) {
-            MiraiMessageSource(
-                runBlocking {
-                    miraiContact.sendMessage(message.toLocal(this@ContactImpl))
-                }.source
-            )
+            kotlin.runCatching {
+                MiraiMessageSource(
+                    runBlocking {
+                        miraiContact.sendMessage(message.toLocal(this@ContactImpl))
+                    }.source
+                )
+            }.getOrElse {
+                miraiBot.rainBot.messageSendFailedByReadTimeout(this, message)
+            }
         }
     }
 
