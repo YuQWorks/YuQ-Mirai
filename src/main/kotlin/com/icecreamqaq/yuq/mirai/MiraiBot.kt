@@ -606,11 +606,22 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 //        NudgeEvent
 
 
-//        eventChannel.subscribeAlways<MemberNudgedEvent> {
-//            if (from.id == botId) return@subscribeAlways
-//            val group = groups[from.group.id] ?: return@subscribeAlways
-//            ClickSomeBodyEvent.Group(group[from.id], group[member.id], action, suffix)()
-//        }
+        eventChannel.subscribeAlways<NudgeEvent> {
+            when (subject) {
+                is MiraiGroup -> {
+                    if (from.id == botId) return@subscribeAlways
+                    val group = groups[subject.id] ?: return@subscribeAlways
+                    if (target.id == botId) ClickBotEvent.Group(group[from.id], action, suffix)
+                    else ClickSomeBodyEvent.Group(group[from.id], group[target.id], action, suffix)
+                }
+                is MiraiFriend -> {
+                    if (from.id == botId) return@subscribeAlways
+                    if (target.id == botId) ClickBotEvent.Private.FriendClick(friends[from.id]!!, action, suffix)
+                    else ClickSomeBodyEvent.Private(friends[from.id]!!, friends[target.id]!!, action, suffix)
+                }
+                else -> error("暂不支持当前类型的戳一戳事件响应。(type: $subject)")
+            }()
+        }
 //        eventChannel.subscribeAlways<BotNudgedEvent> {
 //            if (from.id == botId) return@subscribeAlways
 //            if (from is MiraiMember) {
