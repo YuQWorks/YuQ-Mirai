@@ -1,19 +1,9 @@
 package com.icecreamqaq.yuq.mirai
 
-import com.IceCreamQAQ.Yu.`as`.ApplicationService
-import com.IceCreamQAQ.Yu.annotation.Config
-import com.IceCreamQAQ.Yu.annotation.Default
-import com.IceCreamQAQ.Yu.cache.EhcacheHelp
-import com.IceCreamQAQ.Yu.controller.Router
-import com.IceCreamQAQ.Yu.di.YuContext
-import com.IceCreamQAQ.Yu.event.EventBus
-import com.IceCreamQAQ.Yu.toJSONObject
 import com.IceCreamQAQ.Yu.toJSONString
 import com.IceCreamQAQ.Yu.util.Web
 import com.alibaba.fastjson.JSON
 import com.icecreamqaq.yuq.*
-import com.icecreamqaq.yuq.controller.ContextRouter
-import com.icecreamqaq.yuq.controller.ContextSession
 import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.event.*
 import com.icecreamqaq.yuq.message.Message
@@ -23,93 +13,101 @@ import com.icecreamqaq.yuq.mirai.entity.GroupImpl
 import com.icecreamqaq.yuq.mirai.entity.GroupMemberImpl
 import com.icecreamqaq.yuq.mirai.logger.Network
 import com.icecreamqaq.yuq.mirai.message.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import net.mamoe.mirai.Bot
+import net.mamoe.mirai.Bot as Mirai
 import net.mamoe.mirai.BotFactory
-import net.mamoe.mirai.alsoLogin
-import net.mamoe.mirai.contact.Friend as MiraiFriend
-import net.mamoe.mirai.contact.Group as MiraiGroup
-import net.mamoe.mirai.contact.NormalMember as MiraiMember
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.event.events.GroupMemberEvent
 import net.mamoe.mirai.event.events.MessageRecallEvent
-import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import net.mamoe.mirai.utils.BotConfiguration
-import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.StandardCharImageLoginSolver
-import net.mamoe.mirai.utils.info
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
-import javax.inject.Inject
-import javax.inject.Named
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.collections.set
+import kotlin.text.String
+import net.mamoe.mirai.contact.Friend as MiraiFriend
+import net.mamoe.mirai.contact.Group as MiraiGroup
+import net.mamoe.mirai.contact.NormalMember as MiraiMember
 import net.mamoe.mirai.event.events.BotJoinGroupEvent as MiraiBotJoinGroupEvent
 import net.mamoe.mirai.event.events.FriendAddEvent as MiraiFriendAddEvent
 import net.mamoe.mirai.event.events.FriendDeleteEvent as MiraiFriendDeleteEvent
-import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent as MiraiGroupMessageEvent
+import net.mamoe.mirai.event.events.NewFriendRequestEvent as MiraiNewFriendRequestEvent
 import net.mamoe.mirai.message.data.MessageSource as MiraiSource
 
-open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
+open class MiraiBot(
+    private val qq: Long,
+    pwd: String,
+    private val botName: String?,
+    private val protocol: String
+) : Bot, User, Closeable {
+    constructor(account: MiraiYuQImpl.Account) : this(account.qq, account.pwd, account.name, account.protocol)
 
-    private val log = LoggerFactory.getLogger(MiraiBot::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(MiraiBot::class.java)
+    }
 
-    @Config("YuQ.Mirai.user.qq")
-    lateinit var qq: String
+    private val bot: Mirai = makeBot(qq, pwd)
 
-    @Config("YuQ.Mirai.user.pwd")
-    lateinit var pwd: String
+    fun makeBot(botId: Long, pwd: String): Mirai = BotFactory.newBot(botId, pwd) {
+        if (File("device_$qq.json").exists()) fileBasedDeviceInfo("device_$qq.json")
+        else if (File("device.json").exists()) fileBasedDeviceInfo()
+        else fileBasedDeviceInfo("device_$qq.json")
+        loginSolver = StandardCharImageLoginSolver()
+        networkLoggerSupplier = { Network("Net ${it.id}") }
+        botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
+        if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+        if (this@MiraiBot.protocol == "Watch") protocol = BotConfiguration.MiraiProtocol.ANDROID_WATCH
+        if (this@MiraiBot.protocol == "HD") protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
+    }
 
-    @Config("YuQ.bot.name")
-    private var botName: String? = null
+    fun login() {
+        runBlocking { bot.login() }
+        registerCookie()
+        refreshFriends()
+        refreshGroups()
 
-    @Config("YuQ.Mirai.protocol")
-    @Default("HD")
-    lateinit var protocol: String
+        registerBotEvent()
+    }
 
-    @Inject
-    @field:Named("group")
-    lateinit var group: Router
+    override fun close() {
+        bot.close()
+    }
 
-    @Inject
-    @field:Named("priv")
-    lateinit var priv: Router
-
-    @Inject
-    lateinit var contextRouter: ContextRouter
-
-    @Inject
-    override lateinit var web: Web
+    //    @Config("YuQ.Mirai.user.qq")
+//    lateinit var qq: String
+//
+//    @Config("YuQ.Mirai.user.pwd")
+//    lateinit var pwd: String
+//
+//    @Config("YuQ.bot.name")
+//    private var botName: String? = null
+//
+//    @Config("YuQ.Mirai.protocol")
+//    @Default("HD")
+//    lateinit var protocol: String
+//
+//    @Inject
+//    @field:Named("group")
+//    lateinit var group: Router
+//
+//    @Inject
+//    @field:Named("priv")
+//    lateinit var priv: Router
+//
+//    @Inject
+//    lateinit var contextRouter: ContextRouter
+//
     override fun id2platformId(id: Long) = id.toString()
 
     override fun platformId2id(platformId: String) = platformId.toLong()
-
-    @Inject
-    lateinit var eventBus: EventBus
-
-    @Inject
-    override lateinit var messageItemFactory: MiraiMessageItemFactory
 //    override val web: Web
 
-    @Inject
-    lateinit var rainBot: YuQInternalBotImpl
 
-    @Inject
-    @field:Named("ContextSession")
-    lateinit var sessionCache: EhcacheHelp<ContextSession>
-
-    @Inject
-    lateinit var context: YuContext
-
-    lateinit var bot: Bot
     override var botId: Long = 0
     override val botInfo: User = this
     override val cookieEx = Cookie("", 0, HashMap())
@@ -124,6 +122,10 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
     override lateinit var groups: UserListImpl<GroupImpl>
     override val guilds: GuildList
         get() = TODO("Not yet implemented")
+    override val platform: String
+        get() = TODO("Not yet implemented")
+    override val web: Web
+        get() = TODO("Not yet implemented")
 
     lateinit var sKey: String
     lateinit var superKey: String
@@ -134,42 +136,31 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
 //    var DefaultLogger: (identity: String?) -> MiraiLogger = { YuQMiraiLogger }
 
-    override fun init() {
-//        FPMM.getTime = { System.currentTimeMillis() }
-//        FPMM.clear()
+//    override fun init() {
+////        FPMM.getTime = { System.currentTimeMillis() }
+////        FPMM.clear()
+//
+//        mif = messageItemFactory
+////        mf = messageFactory
+//        yuq = this
+//        botId = qq.toLong()
+//        com.icecreamqaq.yuq.web = web
+//        localEventBus = eventBus
+//        com.icecreamqaq.yuq.eventBus = eventBus
+//        miraiBot = this
+//
+//        bot = makeBot(botId, pwd)
+//        runBlocking {
+//            bot.alsoLogin()
+//        }
+//        context.putBean(Bot::class.java, "", bot)
+//
+//        registerCookie()
+//
+//        refreshFriends()
+//        refreshGroups()
+//    }
 
-        mif = messageItemFactory
-//        mf = messageFactory
-        yuq = this
-        botId = qq.toLong()
-        com.icecreamqaq.yuq.web = web
-        localEventBus = eventBus
-        com.icecreamqaq.yuq.eventBus = eventBus
-        miraiBot = this
-
-        bot = makeBot(botId, pwd)
-        runBlocking {
-            bot.alsoLogin()
-        }
-        context.putBean(Bot::class.java, "", bot)
-
-        registerCookie()
-
-        refreshFriends()
-        refreshGroups()
-    }
-
-    fun makeBot(botId: Long, pwd: String): Bot = BotFactory.newBot(botId, pwd) {
-        if (File("device_$qq.json").exists()) fileBasedDeviceInfo("device_$qq.json")
-        else if (File("device.json").exists()) fileBasedDeviceInfo()
-        else fileBasedDeviceInfo("device_$qq.json")
-        loginSolver = StandardCharImageLoginSolver()
-        networkLoggerSupplier = { Network("Net ${it.id}") }
-        botLoggerSupplier = { com.icecreamqaq.yuq.mirai.logger.Bot(("Bot ${it.id}")) }
-        if (this@MiraiBot.protocol == "Android") protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
-        if (this@MiraiBot.protocol == "Watch") protocol = BotConfiguration.MiraiProtocol.ANDROID_WATCH
-        if (this@MiraiBot.protocol == "HD") protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
-    }
 
     open fun registerCookie() {
         val f = fun(sKey: String): Long {
@@ -209,14 +200,14 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                             )
                             val pskey = YuQ.QQCookie.Pskey(value, f(value))
                             pskeyMap[k] = pskey
-                            web.saveCookie(k, "/", "p_skey", value)
-                            web.saveCookie(k, "/", "p_uin", "o$qq")
+//                            web.saveCookie(k, "/", "p_skey", value)
+//                            web.saveCookie(k, "/", "p_uin", "o$qq")
                         }
 
                         this.cookieEx.pskeyMap = pskeyMap
 
-                        web.saveCookie("qq.com", "/", "uin", "o$qq")
-                        web.saveCookie("qq.com", "/", "skey", sKey)
+//                        web.saveCookie("qq.com", "/", "uin", "o$qq")
+//                        web.saveCookie("qq.com", "/", "skey", sKey)
                     }
                 }
             }
@@ -226,38 +217,30 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
     override fun refreshFriends(): FriendList {
         val friends = UserListImpl<FriendImpl>()
         for (friend in bot.friends) {
-            friends[friend.id] = FriendImpl(friend)
+            friends[friend.id] = FriendImpl(this, friend)
         }
         this.friends = friends
         return friends
     }
 
-    private fun getOrNew(f: MiraiFriend) = friends[f.id] ?: {
-        val a = FriendImpl(f)
-        friends[a.id] = a
-        a
-    }()
+    private fun getOrNew(f: MiraiFriend) = friends.getOrPut(f.id, FriendImpl(this, f))
 
-    private fun getOrNew(g: MiraiGroup) = groups[g.id] ?: {
-        val a = GroupImpl(g)
-        groups[a.id] = a
-        a
-    }()
+    private fun getOrNew(g: MiraiGroup) = groups.getOrPut(g.id, GroupImpl(this, g))
 
     private fun getOrNew(m: MiraiMember) = getOrNew(m.group).run {
-        getOrNull(m.id) ?: {
+        getOrNull(m.id) ?: run {
             val member = GroupMemberImpl(m, this)
             members[member.id] = member
             if (member.permission == 1) admins.add(member)
             member
-        }()
+        }
     }
 
     override fun refreshGroups(): GroupList {
         val groups = UserListImpl<GroupImpl>()
         for (group in bot.groups) {
             try {
-                groups[group.id] = GroupImpl(group)
+                groups[group.id] = GroupImpl(this, group)
             } catch (e: Exception) {
                 log.error("Load Group ${group.id} Error!", e)
             }
@@ -269,15 +252,6 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
     override fun refreshGuilds(): GuildList {
         TODO("Not yet implemented")
-    }
-
-    override fun start() {
-        context.injectBean(rainBot)
-        startBot()
-    }
-
-    override fun stop() {
-        bot.close()
     }
 
     suspend fun MessageChain.toMessage(): Message? {
@@ -309,6 +283,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                         itemNum++
                     }
                 }
+
                 is At -> {
                     val item = AtImpl(m.target)
                     messageBody.append(item)
@@ -316,48 +291,56 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is AtAll -> {
                     val item = (AtImpl(-1L))
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is Face -> {
                     val item = (FaceImpl(m.id))
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is Image -> {
                     val item = (ImageReceive(m.imageId, m.queryUrl()))
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is FlashImage -> {
                     val item = (FlashImageImpl(ImageReceive(m.image.imageId, m.image.queryUrl())))
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is OnlineAudio -> {
                     val item = VoiceRecv(m)
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is LightApp -> {
                     val item = JsonImpl(m.content)
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 is ServiceMessage -> {
                     val item = XmlImpl(m.serviceId, m.content)
                     messageBody.append(item)
                     pathBody.add(item)
                     itemNum++
                 }
+
                 else -> {
                     val item = NoImplItemImpl(m)
                     messageBody.append(item)
@@ -372,7 +355,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
         return message
     }
 
-    fun startBot() {
+    private fun registerBotEvent() {
 
 //        BotEvent
         val eventChannel = bot.eventChannel
@@ -388,7 +371,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 //            message.qq = this.sender.id
 
             val friend = getOrNew(this.sender)
-            rainBot.receiveFriendMessage(friend, message)
+            internalBot.receiveFriendMessage(this@MiraiBot, friend, message)
         }
 
         // 群消息事件
@@ -408,7 +391,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                 else -> return@subscribeAlways
             }
 
-            rainBot.receiveGroupMessage(member, message)
+            internalBot.receiveGroupMessage(this@MiraiBot, member, message)
         }
 
         // 临时会话事件
@@ -419,7 +402,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 //            message.qq = this.sender.id
 
             val member = getOrNew(this.sender as MiraiMember)
-            rainBot.receiveTempMessage(member, message)
+            internalBot.receiveTempMessage(this@MiraiBot, member, message)
         }
 
         // 新好友申请事件
@@ -436,15 +419,16 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                 vips = listOf()
             )
             val g = this.fromGroup?.let { getOrNew(it) }
-            val e = NewFriendRequestEvent(ui, g, this.message)
+            val e = NewFriendRequestEvent(this@MiraiBot, ui, g, this.message)
             if (eventBus.post(e)) {
                 when (e.accept) {
                     true -> {
                         it.accept()
                         val mf = this.bot.friends[this.fromId]!!
-                        val f = FriendImpl(mf)
+                        val f = FriendImpl(this@MiraiBot, mf)
                         this@MiraiBot.friends[f.id] = f
                     }
+
                     else -> it.reject()
                 }
             }
@@ -469,7 +453,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                 owner = ui,
                 admin = listOf()
             )
-            val e = GroupInviteEvent(gi, ui, "")
+            val e = GroupInviteEvent(this@MiraiBot, gi, ui, "")
             if (eventBus.post(e)) {
                 when (e.accept) {
                     true -> {
@@ -508,7 +492,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
         // 好友部分变动监听
         eventChannel.subscribeAlways<MiraiFriendAddEvent> {
-            val friend = FriendImpl(friend)
+            val friend = FriendImpl(this@MiraiBot, friend)
             this@MiraiBot.friends[friend.id] = friend
             eventBus.post(FriendAddEvent(friend))
         }
@@ -523,7 +507,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 
         // 群部分变动监听
         eventChannel.subscribeAlways<MiraiBotJoinGroupEvent> {
-            val group = GroupImpl(group)
+            val group = GroupImpl(this@MiraiBot, group)
             this@MiraiBot.groups[group.id] = group
             eventBus.post(BotJoinGroupEvent(group))
         }
@@ -614,11 +598,13 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                     if (target.id == botId) ClickBotEvent.Group(group[from.id], action, suffix)
                     else ClickSomeBodyEvent.Group(group[from.id], group[target.id], action, suffix)
                 }
+
                 is MiraiFriend -> {
                     if (from.id == botId) return@subscribeAlways
                     if (target.id == botId) ClickBotEvent.Private.FriendClick(friends[from.id]!!, action, suffix)
                     else ClickSomeBodyEvent.Private(friends[from.id]!!, friends[target.id]!!, action, suffix)
                 }
+
                 else -> error("暂不支持当前类型的戳一戳事件响应。(type: $subject)")
             }()
         }
@@ -643,6 +629,7 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
                                 ?: g.bot, this.messageIds[0]
                         )
                     }
+
                     is MessageRecallEvent.FriendRecall -> PrivateRecallEvent(
                         friends[this.authorId] ?: return@subscribeAlways,
                         friends[this.operator.id] ?: return@subscribeAlways,
@@ -652,24 +639,6 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
             )
         }
     }
-
-//    override fun sendMessage(message: Message) =
-//            when {
-//                message.temp -> {
-//                    groups[message.group!!]!![message.qq!!]
-//                }
-//                message.group != null -> {
-//                    groups[message.group!!]!!
-//                }
-//                else -> {
-//                    friends[message.qq!!]!!
-//                }
-//            }.sendMessage(message)
-//
-//
-//    override fun recallMessage(messageSource: MessageSource): Int {
-//        return messageSource.recall()
-//    }
 
     override val avatar: String
         get() = bot.avatarUrl
@@ -683,8 +652,6 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
     override fun canSendMessage() = false
 
     override fun isFriend() = false
-    override fun runtimeName() = "YuQ-Mirai"
 
-    override fun runtimeVersion() = "0.1.0.0-DEV24"
 
 }

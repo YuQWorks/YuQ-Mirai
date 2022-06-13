@@ -1,22 +1,21 @@
 package com.icecreamqaq.yuq.mirai.entity
 
 import com.IceCreamQAQ.Yu.toJSONObject
-import com.icecreamqaq.yuq.YuQ
+import com.icecreamqaq.yuq.Bot
 import com.icecreamqaq.yuq.entity.*
-import com.icecreamqaq.yuq.error.SendMessageFailedByCancel
-import com.icecreamqaq.yuq.event.SendMessageEvent
 import com.icecreamqaq.yuq.message.Image
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageSource
-import com.icecreamqaq.yuq.mirai.localEventBus
-import com.icecreamqaq.yuq.mirai.message.*
-import com.icecreamqaq.yuq.mirai.miraiBot
+import com.icecreamqaq.yuq.mirai.internalBot
+import com.icecreamqaq.yuq.mirai.message.AtImpl
+import com.icecreamqaq.yuq.mirai.message.ImageReceive
+import com.icecreamqaq.yuq.mirai.message.MiraiMessageSource
+import com.icecreamqaq.yuq.mirai.message.toLocal
 import com.icecreamqaq.yuq.mirai.send
 import com.icecreamqaq.yuq.util.WebHelper.Companion.postWithQQKey
 import com.icecreamqaq.yuq.web
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Contact.Companion.uploadImage
-import net.mamoe.mirai.message.action.Nudge
 import net.mamoe.mirai.message.action.Nudge.Companion.sendNudge
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import org.slf4j.LoggerFactory
@@ -26,10 +25,7 @@ import net.mamoe.mirai.contact.Friend as MiraiFriend
 import net.mamoe.mirai.contact.Group as MiraiGroup
 import net.mamoe.mirai.contact.NormalMember as MiraiMember
 
-abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
-
-    override val yuq: YuQ
-        get() = miraiBot
+abstract class ContactImpl(override val yuq: Bot, val miraiContact: MiraiContact) : Contact {
 
     private val log = LoggerFactory.getLogger(ContactImpl::class.java)
 
@@ -54,7 +50,7 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
                     }.source
                 )
             }.getOrElse {
-                miraiBot.rainBot.messageSendFailedByReadTimeout(this, message)
+                internalBot.messageSendFailedByReadTimeout(this, message)
             }
         }
     }
@@ -67,7 +63,7 @@ abstract class ContactImpl(val miraiContact: MiraiContact) : Contact {
         runBlocking { miraiContact.uploadImage(imageFile).let { ImageReceive(it.imageId, it.queryUrl()) } }
 }
 
-class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend {
+class FriendImpl(yuq: Bot, internal val friend: MiraiFriend) : ContactImpl(yuq, friend), Friend {
 
     override val id = friend.id
     override val platformId = id.toString()
@@ -92,7 +88,7 @@ class FriendImpl(internal val friend: MiraiFriend) : ContactImpl(friend), Friend
 
 }
 
-class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
+class GroupImpl(yuq: Bot, internal val group: MiraiGroup) : ContactImpl(yuq, group), Group {
     override val id = group.id
     override val platformId = id.toString()
     override val guid = "g$id"
@@ -180,7 +176,7 @@ class GroupImpl(internal val group: MiraiGroup) : ContactImpl(group), Group {
 open class GroupMemberImpl(
     internal val member: MiraiMember,
     final override val group: GroupImpl
-) : ContactImpl(member),
+) : ContactImpl(group.yuq, member),
     Member {
     override val platformId = id.toString()
     override val guid = "${group.id}_$id"
@@ -249,7 +245,8 @@ open class GroupMemberImpl(
 
 }
 
-class AnonymousMemberImpl(member: MiraiMember, group: GroupImpl) : GroupMemberImpl(member, group), AnonymousMember {
+class AnonymousMemberImpl(member: MiraiMember, group: GroupImpl) : GroupMemberImpl(member, group),
+    AnonymousMember {
 
     override val guid = "${id}_${group.id}"
 
