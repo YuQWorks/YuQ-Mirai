@@ -6,6 +6,8 @@ import com.alibaba.fastjson.JSON
 import com.icecreamqaq.yuq.*
 import com.icecreamqaq.yuq.entity.*
 import com.icecreamqaq.yuq.event.*
+import com.icecreamqaq.yuq.event.BotOfflineEvent
+import com.icecreamqaq.yuq.event.BotOnlineEvent
 import com.icecreamqaq.yuq.message.Message
 import com.icecreamqaq.yuq.message.MessageItem
 import com.icecreamqaq.yuq.mirai.entity.FriendImpl
@@ -65,17 +67,19 @@ open class MiraiBot(
         if (this@MiraiBot.protocol == "HD") protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
     }
 
-    fun login() {
+    override fun login() {
         runBlocking { bot.login() }
         registerCookie()
         refreshFriends()
         refreshGroups()
 
         registerBotEvent()
+        BotOnlineEvent(this).post()
     }
 
     override fun close() {
         bot.close()
+        BotOfflineEvent(this).post()
     }
 
     //    @Config("YuQ.Mirai.user.qq")
@@ -362,6 +366,7 @@ open class MiraiBot(
 
         eventChannel.subscribeAlways<BotReloginEvent> {
             registerCookie()
+            BotReOnlineEvent(this@MiraiBot).post()
         }
 
         // 好友消息事件

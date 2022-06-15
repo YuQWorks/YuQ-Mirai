@@ -6,7 +6,7 @@
 
     <groupId>com.IceCreamQAQ.YuQ</groupId>
     <artifactId>YuQ-Mirai</artifactId>
-    <version>0.1.0.0-DEV25+MultiBot-DEV1</version>
+    <version>0.1.0.0-DEV25+MultiBot-DEV2</version>
 
     <name>YuQ-Mirai</name>
     <description>YuQ-Mirai is a simple qq robot Framework.</description>
@@ -43,7 +43,7 @@
         <kotlin.version>1.6.10</kotlin.version>
 
         <mirai.version>2.11.1</mirai.version>
-        <YuQ.version>0.1.0.0-DEV33+MultiBot-DEV1</YuQ.version>
+        <YuQ.version>0.1.0.0-DEV33+MultiBot-DEV2</YuQ.version>
 
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
     </properties>
