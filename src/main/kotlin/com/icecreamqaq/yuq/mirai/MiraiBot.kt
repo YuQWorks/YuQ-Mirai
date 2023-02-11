@@ -478,6 +478,8 @@ open class MiraiBot : YuQ, ApplicationService, User, YuQVersion {
 //                        val g = GroupImpl(mg)
 //                        this@MiraiBot.groups[g.id] = g
                     }
+
+                    else -> {}
                 }
             }
         }
